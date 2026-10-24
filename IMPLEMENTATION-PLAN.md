@@ -1,0 +1,57 @@
+# IMPLEMENTATION PLAN — POCKET-BRAIN
+
+Date: 2026-10-22. Executor models per stage: see each stage and `HANDOFF.md`. Stack: see `GENESIS-PROMPT.md`.
+Every stage ends with: tests green, commit `stage N: …`, `STATUS.md`, «Сделай /clear и напиши «продолжай POCKET-BRAIN»». Stages run back to back (each implemented by a fresh subagent, verified by the main chat); /clear only on the context guard. Two failed attempts at the same thing → STATUS «блокер: …», stop.
+
+## Architectural invariants (re-read at the start of every stage)
+1. DO NOT FAKE INTEGRATIONS. No access / not verified → stub `TODO:INTEGRATION` + a line in STATUS. Never claim a phone-only behaviour as verified.
+2. NO USER DATA IN THE PUBLIC REPO. Only code and model shards. Test phrases use invented names and amounts. No real wallet balances, no backups, no exports in git (`.gitignore` + a CI-less check `git ls-files | grep -i data` in the stage close).
+3. TOKEN ONLY TYPED BY OWNER. Fine-grained token (one repo `pocket-brain-data`, Contents: read/write). Never in code, URL, backup, export, logs, screenshots or chat. Backup/export use an ALLOWLIST of fields; a test puts a fake token in settings and asserts it is absent from every serialized output and every logged line.
+4. RULES FIRST, MODEL NEVER BLOCKS SAVE. Rules parse instantly (< 50 ms); the card is shown and «Сохранить» is enabled before any model work. Model result only refines the card afterwards. If rules are unsure the kind is `idea` (text is never lost).
+5. ALL TIMES SHOWN IN MSK (+03:00), big; local time small. Stored in UTC. Parsing reference is `Europe/Moscow` (+03:00) regardless of the phone's zone. Tests inject `now`.
+6. `#t=` READ ONCE, THEN `history.replaceState` clears it. The text goes to a draft with an id; save is an upsert by record id, so reload/back never duplicates. Also listen to `hashchange` and `pageshow`.
+7. SINGLE-THREAD WLLAMA COMPAT (no COOP/COEP on Pages). `@wllama/wllama-compat`, 1 thread, wasm32. The app is fully usable without the model.
+8. Money = integer kopecks. Rates/terms/limits/wallet defaults live in settings/`config.ts`, not scattered in code.
+9. BACKUP SAFETY: one backup in flight at a time; on 409/422 re-GET sha and retry (max 3, backoff); a failed backup never blocks saving and shows a friendly message (401 → «токен не подходит или истёк»).
+10. Model loading must survive being killed by iOS: set a `model_loading` flag before load, clear after success; if the flag is found set at startup, disable the model and show «Мозг отключён: телефон не потянул» with a retry button.
+11. Model output is untrusted: JSON grammar + schema validation; fill-only merge (model may fill empty fields, never overwrite a rules field); amounts/dates from the model are accepted only if the digits/phrase occur in the raw text.
+12. Free only. No paid services, no analytics, no external fonts/CDN at runtime (offline).
+
+## MVP scope
+**Inside:** one page + service worker; rules parser (ru); IndexedDB; card «Понял так»; lists; wallets + totals; reminder hand-off to Shortcut; GitHub autobackup + Restore + Export; background model refinement; iPhone test page.
+**Post-MVP (do not build now):** graph/embeddings (multilingual-e5-small), in-page speech recognition, sync with PAY-REMINDER bot, banks, charts, automatic repeating reminders.
+
+## Stages
+
+### Stage 0 — Scaffold, deploy, iPhone test page (model: Sonnet)
+Do: `git init`; Vite+TS+Vitest+Playwright (WebKit+Chromium); `gh` creates `pocket-brain` (public) and `pocket-brain-data` (private, with README); empty app shell + service worker caching the shell (offline after first load); Pages deploy (GitHub Actions workflow; if the token lacks workflow scope, fall back to an orphan `gh-pages` branch built locally; record in DECISIONS.md); `STATUS.md`, `DECISIONS.md`. Test page at `/pocket-brain/test/` built from `C:\Users\Lenovo\Desktop\ArchiTechk\cases\POCKET-BRAIN\research\round2\safari-compute.md` §9 (Grep for «## 9», read from there; copy the spec into `docs/iphone-test.md`): each step writes its result to localStorage BEFORE the next allocation and shows a big table «шаг — число — ок/упало»: (1) WebGPU adapter limits (`maxBufferSize`, `maxStorageBufferBindingSize`, `maxComputeWorkgroupStorageSize`, `shader-f16`, `subgroups`, `adapter.info`; info only); (2) `crossOriginIsolated`, `typeof SharedArrayBuffer`; (3) `navigator.storage.estimate()` and `persist()`; (4) max allocation: ArrayBuffer in 128 MB steps, each chunk FILLED (`new Uint8Array(buf).fill(1)`), references kept; (5) wllama-compat tokens/sec for Qwen2.5-0.5B-Instruct Q4 and Qwen3-0.6B Q4 on a fixed JSON-reminder prompt, loaded from Hugging Face (verify the URLs and licence on the model cards via WebFetch/context7 first), one model per button, result stored before and after load.
+Decision rule (write to DECISIONS.md after the owner sends the phone screenshot): allocation ceiling < 0.8 GB or model load crashes → stage 5 becomes «rules only, model disabled»; otherwise stage 5 as written.
+Готово, когда: the Pages URL opens in Playwright WebKit and Chromium at 375 px; offline reload works (`context.setOffline`); the test page opens, runs steps 1–4 on the laptop and shows the table (screenshot); repos exist with correct visibility (`gh repo view`); no data in public repo; owner has the test-page link and 3 steps (SETUP «Тест телефона») — result is awaited, not assumed.
+
+### Stage 1 — Rules parser for Russian (model: Opus)
+Tests FIRST: `tests/fixtures/phrases.ru.json`, 50 phrases with expected JSON (kind, amount_minor, wallet, due_utc, who, rate, term, day, tags): 10 reminders, 9 expenses, 4 income, 3 transfers, 6 held-money (чужие деньги), 5 deposits, 6 subscriptions, 7 ideas. Cover chrono-node `ru` (+03:00): «сегодня в 19:00», «завтра в семь вечера», «через 10 минут», «через два часа», «в пятницу в 15:30», «17-го числа», number words («пятьсот рублей», «три тысячи двести», «шесть с половиной процента»), wallet aliases («золотая», «тинькофф», «наличные»). Fixed `now`; asserts like «завтра в 19:00» → 16:00Z. Names/amounts invented. Then implement `parse(text, now, wallets) → {kind, confidence, fields, tags}`: number-word normaliser → chrono → regex/dictionaries. Unknown → `idea`.
+Готово, когда: all 50 phrases pass with 100% of the expected fields (the fixture is the spec; do not weaken expectations to make tests pass); parser < 50 ms per phrase; `pnpm test` green; the fixture is committed for reuse in stage 5.
+
+### Stage 2 — Storage and UI (model: Sonnet)
+Do: IndexedDB wrapper + migrations; records, wallets, drafts, settings; `#t=` handling per invariant 6; input card «Понял так» (edit kind/fields/wallet, «Сохранить» always enabled); lists «Дела», «Деньги» (wallets add/rename/hide, start balance, totals per wallet and total «чужих денег», deposits, subscriptions), «Мысли» (tags); soft delete; settings screen skeleton; all times via one `formatMsk()`.
+Готово, когда: Playwright (WebKit + Chromium, 375 px): open `/#t=<phrase>` → card shows → save → record in list; URL no longer contains `#t=`; reload → no duplicate (count = 1); opening the same link twice with the same draft id → 1 record; wallet add/rename/hide works; totals match a hand-computed script; times show MSK; screenshots `scale: 0.5`.
+
+### Stage 3 — Reminder hand-off (model: Sonnet)
+Do: «Поставить напоминание» builds `shortcuts://run-shortcut?name=<encoded «Мозг-напомнить»>&input=text&text=<encoded JSON>`. Payload (documented in `docs/shortcut-payload.md`): `{"title": "...", "due": "2026-10-23T19:00:00+03:00", "due_local": "2026-10-23 21:00", "due_msk": "23.10 19:00 МСК", "repeat": "none"}` — `due_local` is the same instant in the PHONE's zone (fallback if Shortcuts ignores the offset). Subscriptions: payload for the next occurrence; `repeat` is carried but the MVP Shortcut ignores it (state it honestly in SETUP).
+Готово, когда: unit tests: offset correct in any `TZ` env (run with `TZ=UTC`, `TZ=America/New_York`), JSON parses back, URL-encoding of Cyrillic and quotes round-trips; Playwright: tapping the button navigates to the expected `shortcuts://` URL (intercept); real execution on iPhone is NOT verified → listed «проверить на телефоне: время по МСК».
+
+### Stage 4 — GitHub autobackup (model: Sonnet; `security-reviewer` before closing)
+Do: token field in Settings (typed by owner, `type=password`); backup on every save and on open when online: GET sha → PUT (`api.github.com/repos/<login>/pocket-brain-data/contents/data/pocket-brain.json`, base64 UTF-8); on 409/422 re-GET sha and retry; single-flight queue (coalesce saves); if serialized size > 1 MB → split by month into `data/records-YYYY-MM.json` (+ `data/pocket-brain.json` keeps wallets/settings), skip unchanged files; status «последняя копия: <время МСК>» and «копии нет: <причина>»; «Восстановить из GitHub» (reads all files, asks to confirm, merges by id, newest `updated_utc` wins); «Экспорт в Файлы» (JSON download/share). Allowlist serializer (invariant 3). Chat tests against a local mock of the GitHub contents API (200, 409, 422, 401, offline); the chat never receives the real token.
+Готово, когда: mock-server tests green incl. 409→retry, 422→retry, one-in-flight (two saves → ≤ 1 concurrent request), split at 1 MB and restore from split files, fake-token-absent test; export file contains no token; `security-reviewer` clean. REAL upload/restore with the owner's token is NOT verifiable by the chat → ACCEPTANCE phone step «проверить на телефоне».
+
+### Stage 5 — Model layer (model: Opus)
+Do: read the phone-test result in DECISIONS.md (stage 0 rule). Convert both candidates to GGUF Q4 if not already; split with `llama-gguf-split` into shards < 100 MB; evaluate **Qwen2.5-0.5B-Instruct Q4 vs Qwen3-0.6B Q4** on the same 50 phrases (stage 1 fixture) in headless Chromium via wllama-compat, JSON grammar, temperature 0: report schema-valid rate, field accuracy on phrases where rules were unsure, seconds per phrase. Pick the winner (higher accuracy; tie → smaller/faster). Commit ONLY the winner's shards to `public/model/` (repo stays < 1 GB); check the winner's licence allows redistribution. App: «Скачать мозг» button (Wi-Fi hint, size shown), cache in the browser, background queue after save, refine the card/record per invariants 4, 10, 11; model on/off in Settings.
+Готово, когда: eval table (both models, 50 phrases) saved in `docs/model-eval.md`; shards each < 100 MB and the app loads them from Pages in Chromium; with the model OFF or unreachable everything still works (test); a rules-unsure phrase gets refined while save stays instant (timing test: save < 1 s while model is busy); `model_loading` flag recovery tested by killing the page mid-load. Speed and memory on the iPhone are NOT verified → phone step.
+
+### Stage 6 — Acceptance and owner report (model: Sonnet)
+Do: run `ACCEPTANCE.md` laptop part end to end on WebKit and Chromium at 375 px and desktop, screenshots at `scale: 0.5`; fix; confirm the live Pages URL (not localhost) for every check; offline test on the live URL; write the Russian report (link for iPhone + next manual step from `SETUP.md`).
+Готово, когда: every laptop item in ACCEPTANCE is `[x]` with date/method; live URL opens, works offline after first load; unverified items listed honestly; `STATUS.md` updated; owner has the iPhone link.
+
+## Execution rules
+- Deviation from the plan → a line in `DECISIONS.md` (date, what, why).
+- Owner manual steps come from `SETUP.md`, one at a time.

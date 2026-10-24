@@ -1,0 +1,10 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+coverage/
+*.gguf
+*backup*.json
+*export*.json
+.env*
+*.log

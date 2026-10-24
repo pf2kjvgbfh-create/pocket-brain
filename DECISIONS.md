@@ -1,0 +1,5 @@
+# DECISIONS — отклонения от плана и выборы (дата, что, почему)
+
+- 2026-10-22 · Публикация сайта: сборка на ноутбуке и принудительная отправка `dist/` одним коммитом в ветку `gh-pages` (скрипт `scripts/deploy.mjs`), а не GitHub Actions. Почему: у ключа `gh` права `repo, gist, read:org`, без `workflow` — файл workflow не запушить. Один коммит на публикацию — чтобы старые сборки и куски модели не копились в истории ветки.
+- 2026-10-22 · Тест-страница iPhone, шаг 5: модели грузятся прямо с Hugging Face (только на тест-странице; само приложение внешних адресов, кроме api.github.com, не использует). Qwen2.5-0.5B-Instruct Q4_K_M — официальный репо `Qwen/Qwen2.5-0.5B-Instruct-GGUF` (491 МБ, Apache-2.0); Qwen3-0.6B Q4_K_M — у Qwen официально только Q8_0, поэтому `unsloth/Qwen3-0.6B-GGUF` (397 МБ, Apache-2.0). Обе ссылки отвечают 200 и `access-control-allow-origin: *` (проверено curl 2026-10-24).
+- 2026-10-24 · `llama-gguf-split` поставлен через `winget install ggml.llamacpp` (официальный пакет llama.cpp, сборка b11804); путь: `%LOCALAPPDATA%\Microsoft\WinGet\Packages\ggml.llamacpp_Microsoft.Winget.Source_8wekyb3d8bbwe\llama-gguf-split.exe`.

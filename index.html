@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Мозг" />
+    <title>Карманный мозг</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main id="screens">
+      <section class="screen" id="screen-new" data-tab="new" aria-labelledby="tab-new">
+        <h1>Новое</h1>
+        <label for="new-text" class="hint">Скажи или напиши, что запомнить</label>
+        <textarea id="new-text" rows="4" placeholder="Например: напомни завтра в 19:00 позвонить маме" autocomplete="off"></textarea>
+        <p class="hint">Разбор текста появится в следующих версиях.</p>
+      </section>
+      <section class="screen" id="screen-todo" data-tab="todo" hidden>
+        <h1>Дела</h1>
+        <p class="hint">Пока пусто.</p>
+      </section>
+      <section class="screen" id="screen-money" data-tab="money" hidden>
+        <h1>Деньги</h1>
+        <p class="hint">Пока пусто.</p>
+      </section>
+      <section class="screen" id="screen-ideas" data-tab="ideas" hidden>
+        <h1>Мысли</h1>
+        <p class="hint">Пока пусто.</p>
+      </section>
+      <section class="screen" id="screen-settings" data-tab="settings" hidden>
+        <h1>Настройки</h1>
+        <p class="hint">Пока пусто.</p>
+      </section>
+    </main>
+    <nav class="tabbar" role="tablist" aria-label="Разделы">
+      <button role="tab" id="tab-new" data-tab="new" aria-selected="true">Новое</button>
+      <button role="tab" id="tab-todo" data-tab="todo" aria-selected="false">Дела</button>
+      <button role="tab" id="tab-money" data-tab="money" aria-selected="false">Деньги</button>
+      <button role="tab" id="tab-ideas" data-tab="ideas" aria-selected="false">Мысли</button>
+      <button role="tab" id="tab-settings" data-tab="settings" aria-selected="false">Настройки</button>
+    </nav>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
