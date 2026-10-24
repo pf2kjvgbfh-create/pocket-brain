@@ -1,7 +1,7 @@
 Обновлено: 2026-10-24
-Сделано: этап 0 — каркас (5 вкладок, офлайн через service worker), тест-страница iPhone, репо pocket-brain (публичный) и pocket-brain-data (приватный), сайт https://pf2kjvgbfh-create.github.io/pocket-brain/ (тест: /pocket-brain/test/). Живая ссылка проверена в Chromium 375/1280: вкладки, офлайн-перезагрузка, шаги 1–4 тест-страницы — ок. Публикация: `node scripts/deploy.mjs` (ветка gh-pages). llama-gguf-split установлен (путь в DECISIONS.md).
+Сделано: этап 1 — разбор фраз (50/50, тесты в поясах UTC и Нью-Йорк зелёные), коммит stage 1. Этап 0 — каркас (5 вкладок, офлайн через service worker), тест-страница iPhone, репо pocket-brain (публичный) и pocket-brain-data (приватный), сайт https://pf2kjvgbfh-create.github.io/pocket-brain/ (тест: /pocket-brain/test/). Живая ссылка проверена в Chromium 375/1280: вкладки, офлайн-перезагрузка, шаги 1–4 тест-страницы — ок. Публикация: `node scripts/deploy.mjs` (ветка gh-pages). llama-gguf-split установлен (путь в DECISIONS.md).
 Решено: деплой через gh-pages (нет права workflow); коммиты от noreply-почты (GitHub отклонял push из-за приватности почты) — уже в git config репо.
 Замечания владельца: —
-Не работает / блокер: WebKit для Playwright ставился в фоне (`pnpm exec playwright install webkit chromium`) — проверить, что папка webkit-2370 есть, и прогнать `BASE_URL=https://pf2kjvgbfh-create.github.io/pocket-brain/ pnpm exec playwright test` для webkit; шаг 5а тест-страницы (загрузка модели) в Chromium проверялся `pnpm exec playwright test -c e2e-manual/manual.config.ts --project=chromium` — результат не получен.
-Проверить на телефоне: тест-страница (SETUP п.0) — ссылку владельцу ещё не отправлял.
-Дальше: этап 1 (разбор фраз) был запущен подагентом Opus — проверить, что есть tests/fixtures/phrases.ru.json (50 фраз) и src/parser/, прогнать `pnpm test` и `pnpm test:tz`; если не доделано — перезапустить подагент с узким брифом. Затем этапы 2→6 — модели по HANDOFF.md.
+Не работает / блокер: —  (WebKit поставлен 2026-10-24; живая ссылка в WebKit 375/1280: вкладки, офлайн, тест-страница — ок)
+Проверить на телефоне: тест-страница (SETUP п.0) — ссылка владельцу отправлена 2026-10-24, ждём скриншот. Шаг 5а в Chromium ноутбука: загрузка 291 с, 4,2 ток/с.
+Дальше: этап 2 (карточка, списки, кошельки) — подагент Sonnet запущен; WebKit-прогон после установки. Затем 3→6.
