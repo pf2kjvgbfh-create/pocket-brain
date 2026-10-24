@@ -1,0 +1,63 @@
+{
+  "now": "2026-10-22T09:00:00Z",
+  "note": "Spec for the rules parser (stage 1) and the model evaluation (stage 5). now = Thursday 12:00 MSK. Names and amounts are invented. Only keys present in `expected` are asserted. No said time -> 12:00 MSK. Subscriptions: due_utc = next occurrence of `day` (12:00 MSK unless a time is said).",
+  "phrases": [
+    { "text": "напомни завтра в 19:00 позвонить маме", "expected": { "kind": "reminder", "title": "позвонить маме", "due_utc": "2026-10-23T16:00:00.000Z" } },
+    { "text": "сегодня в 19:00 забрать посылку", "expected": { "kind": "reminder", "title": "забрать посылку", "due_utc": "2026-10-22T16:00:00.000Z" } },
+    { "text": "напомни завтра в семь вечера купить хлеб", "expected": { "kind": "reminder", "title": "купить хлеб", "due_utc": "2026-10-23T16:00:00.000Z" } },
+    { "text": "через 10 минут выключить духовку", "expected": { "kind": "reminder", "title": "выключить духовку", "due_utc": "2026-10-22T09:10:00.000Z" } },
+    { "text": "напомни через два часа проверить почту", "expected": { "kind": "reminder", "title": "проверить почту", "due_utc": "2026-10-22T11:00:00.000Z" } },
+    { "text": "в пятницу в 15:30 встреча с Ильёй", "expected": { "kind": "reminder", "title": "встреча с Ильёй", "due_utc": "2026-10-23T12:30:00.000Z" } },
+    { "text": "напомни 17-го числа оплатить квартиру", "expected": { "kind": "reminder", "title": "оплатить квартиру", "due_utc": "2026-11-17T09:00:00.000Z" } },
+    { "text": "напомни послезавтра в 9 утра записаться к врачу", "expected": { "kind": "reminder", "title": "записаться к врачу", "due_utc": "2026-10-24T06:00:00.000Z" } },
+    { "text": "Напомнить в понедельник в 10:00 отправить отчёт", "expected": { "kind": "reminder", "title": "отправить отчёт", "due_utc": "2026-10-26T07:00:00.000Z" } },
+    { "text": "напомни 1 ноября продлить страховку", "expected": { "kind": "reminder", "title": "продлить страховку", "due_utc": "2026-11-01T09:00:00.000Z" } },
+
+    { "text": "купил воду за 500, золотая карта", "expected": { "kind": "expense", "amount_minor": 50000, "wallet": "Золотая карта" } },
+    { "text": "купил воду за пятьсот рублей золотая карта", "expected": { "kind": "expense", "amount_minor": 50000, "wallet": "Золотая карта" } },
+    { "text": "потратил 1 250 рублей на такси с тинькофф", "expected": { "kind": "expense", "amount_minor": 125000, "wallet": "Тинькофф" } },
+    { "text": "заплатил за обед 450 наличными", "expected": { "kind": "expense", "amount_minor": 45000, "wallet": "Наличные" } },
+    { "text": "кофе 180 рублей наличка", "expected": { "kind": "expense", "amount_minor": 18000, "wallet": "Наличные" } },
+    { "text": "оплатил интернет 650 рублей серебряная", "expected": { "kind": "expense", "amount_minor": 65000, "wallet": "Серебряная карта" } },
+    { "text": "потратила три тысячи двести на продукты золотой картой", "expected": { "kind": "expense", "amount_minor": 320000, "wallet": "Золотая карта" } },
+    { "text": "купил билеты в кино за 2 400 р. тиньк", "expected": { "kind": "expense", "amount_minor": 240000, "wallet": "Тинькофф" } },
+    { "text": "такси полторы тысячи с серебряной карты", "expected": { "kind": "expense", "amount_minor": 150000, "wallet": "Серебряная карта" } },
+
+    { "text": "пришла зарплата 85 000 на тинькофф", "expected": { "kind": "income", "amount_minor": 8500000, "wallet": "Тинькофф" } },
+    { "text": "получил пятнадцать тысяч наличными за ремонт", "expected": { "kind": "income", "amount_minor": 1500000, "wallet": "Наличные" } },
+    { "text": "кэшбэк 320 рублей на золотую карту", "expected": { "kind": "income", "amount_minor": 32000, "wallet": "Золотая карта" } },
+    { "text": "мне вернули 3 000 рублей на серебряную карту", "expected": { "kind": "income", "amount_minor": 300000, "wallet": "Серебряная карта" } },
+
+    { "text": "перевёл 10 000 с тинькофф на золотую карту", "expected": { "kind": "transfer", "amount_minor": 1000000, "wallet": "Тинькофф", "to_wallet": "Золотая карта" } },
+    { "text": "перекинул пять тысяч с золотой карты на наличные", "expected": { "kind": "transfer", "amount_minor": 500000, "wallet": "Золотая карта", "to_wallet": "Наличные" } },
+    { "text": "перевела 3 тысячи 200 с серебряной карты на вклад", "expected": { "kind": "transfer", "amount_minor": 320000, "wallet": "Серебряная карта", "to_wallet": "Вклад" } },
+
+    { "text": "Иван отдал мне на хранение 3000, положил под 6,5%", "expected": { "kind": "held", "who": "Иван", "amount_minor": 300000, "rate": 6.5 } },
+    { "text": "Ольга дала мне на хранение пятьдесят тысяч под шесть с половиной процента", "expected": { "kind": "held", "who": "Ольга", "amount_minor": 5000000, "rate": 6.5 } },
+    { "text": "Пётр оставил у меня 20 000 рублей на хранение", "expected": { "kind": "held", "who": "Пётр", "amount_minor": 2000000 } },
+    { "text": "чужие деньги: Марина 15 000 под 10% на 6 месяцев", "expected": { "kind": "held", "who": "Марина", "amount_minor": 1500000, "rate": 10, "term_months": 6 } },
+    { "text": "Андрей передал мне на хранение три тысячи двести наличными", "expected": { "kind": "held", "who": "Андрей", "amount_minor": 320000, "wallet": "Наличные" } },
+    { "text": "сестра дала мне 10 тысяч на хранение под 5% на год", "expected": { "kind": "held", "who": "Сестра", "amount_minor": 1000000, "rate": 5, "term_months": 12 } },
+
+    { "text": "открыл вклад на 100 000 под 18% на 6 месяцев", "expected": { "kind": "deposit", "amount_minor": 10000000, "rate": 18, "term_months": 6 } },
+    { "text": "положил на вклад двести тысяч под шестнадцать с половиной процентов на год", "expected": { "kind": "deposit", "amount_minor": 20000000, "rate": 16.5, "term_months": 12 } },
+    { "text": "вклад 50 000 рублей под 17,5% на 3 месяца", "expected": { "kind": "deposit", "amount_minor": 5000000, "rate": 17.5, "term_months": 3 } },
+    { "text": "положил 30 тысяч на вклад в тинькофф под 15 процентов на полгода", "expected": { "kind": "deposit", "amount_minor": 3000000, "rate": 15, "term_months": 6, "wallet": "Тинькофф" } },
+    { "text": "открыла вклад полтора миллиона под 19% на 12 месяцев", "expected": { "kind": "deposit", "amount_minor": 150000000, "rate": 19, "term_months": 12 } },
+
+    { "text": "17-го каждого месяца 300 рублей", "expected": { "kind": "subscription", "amount_minor": 30000, "day": 17, "due_utc": "2026-11-17T09:00:00.000Z" } },
+    { "text": "подписка на облако 149 рублей 1-го числа", "expected": { "kind": "subscription", "title": "облако", "amount_minor": 14900, "day": 1, "due_utc": "2026-11-01T09:00:00.000Z" } },
+    { "text": "каждый месяц 10-го числа интернет 650 рублей с тинькофф", "expected": { "kind": "subscription", "title": "интернет", "amount_minor": 65000, "day": 10, "due_utc": "2026-11-10T09:00:00.000Z", "wallet": "Тинькофф" } },
+    { "text": "оплата за телефон пятьсот рублей ежемесячно двадцать пятого числа", "expected": { "kind": "subscription", "title": "телефон", "amount_minor": 50000, "day": 25, "due_utc": "2026-10-25T09:00:00.000Z" } },
+    { "text": "подписка кинотеатр 349 рублей 3-го числа с золотой карты", "expected": { "kind": "subscription", "title": "кинотеатр", "amount_minor": 34900, "day": 3, "due_utc": "2026-11-03T09:00:00.000Z", "wallet": "Золотая карта" } },
+    { "text": "спортзал 2 500 рублей каждый месяц 28-го в 10:00", "expected": { "kind": "subscription", "title": "спортзал", "amount_minor": 250000, "day": 28, "due_utc": "2026-10-28T07:00:00.000Z" } },
+
+    { "text": "идея: приложение для рецептов #кухня #проект", "expected": { "kind": "idea", "tags": ["кухня", "проект"] } },
+    { "text": "что-то непонятное про вторник", "expected": { "kind": "idea", "tags": [] } },
+    { "text": "идея: сделать полку в коридоре тег: дом", "expected": { "kind": "idea", "tags": ["дом"] } },
+    { "text": "мысль: читать по 20 страниц в день #привычки", "expected": { "kind": "idea", "tags": ["привычки"] } },
+    { "text": "надо бы разобраться с фотографиями", "expected": { "kind": "idea", "tags": [] } },
+    { "text": "идея подарить Ане на день рождения книгу за 1500", "expected": { "kind": "idea", "tags": [] } },
+    { "text": "хорошая книга про привычки теги: чтение, саморазвитие", "expected": { "kind": "idea", "tags": ["чтение", "саморазвитие"] } }
+  ]
+}

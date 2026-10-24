@@ -8,12 +8,14 @@
     "build": "tsc --noEmit && vite build && node scripts/build-sw.mjs",
     "preview": "vite preview --port 4173 --strictPort",
     "test": "vitest run",
+    "test:tz": "node scripts/test-tz.mjs",
     "e2e": "playwright test",
     "deploy": "node scripts/deploy.mjs"
   },
   "dependencies": {
     "@wllama/wllama": "3.8.1",
-    "@wllama/wllama-compat": "3.8.1"
+    "@wllama/wllama-compat": "3.8.1",
+    "chrono-node": "~2.10.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

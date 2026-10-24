@@ -14,6 +14,9 @@ importers:
       '@wllama/wllama-compat':
         specifier: 3.8.1
         version: 3.8.1
+      chrono-node:
+        specifier: ~2.10.3
+        version: 2.10.3
     devDependencies:
       '@playwright/test':
         specifier: ^1.64.1
@@ -309,6 +312,10 @@ packages:
   chai@6.3.0:
     resolution: {integrity: sha512-XWAtwJ6OHO+tj0EKCs0Y2UamnyOxseZWltU4x2U2wh8g4AigdjwvtUjvLP2tqkA/avxHEtzxNaqGq/YGNwckKg==}
     engines: {node: '>=18'}
+
+  chrono-node@2.10.3:
+    resolution: {integrity: sha512-MOfrzXgSMZTH4SZ5gyRKQCVwiCrCKY+uYkSJiWoRLXS88DA6WGJm8UjgS+VVEuUQeew/UUXaxrO+SeDn/WCisg==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
@@ -721,6 +728,8 @@ snapshots:
   assertion-error@2.0.1: {}
 
   chai@6.3.0: {}
+
+  chrono-node@2.10.3: {}
 
   detect-libc@2.1.2: {}
 
