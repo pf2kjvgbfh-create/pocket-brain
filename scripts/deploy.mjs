@@ -7,7 +7,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const run = (cmd, args, cwd = root) => execFileSync(cmd, args, { cwd, stdio: 'inherit', shell: process.platform === 'win32' });
+// pnpm is a .cmd shim on Windows and needs a shell; git must not get one (it would split the commit message).
+const run = (cmd, args, cwd = root) =>
+  execFileSync(cmd, args, { cwd, stdio: 'inherit', shell: cmd === 'pnpm' && process.platform === 'win32' });
 const read = (cmd, args) => execFileSync(cmd, args, { cwd: root, encoding: 'utf8' }).trim();
 
 if (!process.argv.includes('--no-build')) run('pnpm', ['build']);
