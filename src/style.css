@@ -73,3 +73,91 @@ textarea {
   white-space: nowrap;
 }
 .tabbar button[aria-selected="true"] { color: var(--accent); border-top-color: var(--accent); font-weight: 600; }
+
+/* ---- stage 2: forms, card, lists ---- */
+h2 { font-size: 20px; margin: 0; }
+input, select, textarea { min-width: 0; max-width: 100%; }
+input, select {
+  width: 100%;
+  font: inherit;
+  padding: 10px 12px;
+  color: var(--fg);
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.btn {
+  min-height: 48px;
+  padding: 10px 18px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--fg);
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.btn.primary { color: #fff; background: var(--accent); border-color: var(--accent); }
+@media (prefers-color-scheme: dark) { .btn.primary { color: #0e1013; } }
+.btn.danger { color: var(--bad); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 16px 0 0; }
+.confirm-box { display: inline-flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.confirm-text { font-size: 16px; color: var(--bad); }
+.notice { margin: 8px 0; padding: 10px 12px; border-radius: 12px; background: var(--field); border: 1px solid var(--ok); color: var(--ok); font-size: 18px; }
+.error { color: var(--bad); font-size: 16px; margin: 8px 0 0; min-height: 0; }
+.error:empty { display: none; }
+.card { padding: 4px 0 8px; }
+.sentence { font-size: 24px; font-weight: 600; margin: 8px 0; overflow-wrap: anywhere; }
+.raw { color: var(--muted); font-size: 16px; margin: 4px 0 12px; overflow-wrap: anywhere; }
+.row-field { display: block; margin: 0 0 12px; }
+.row-field .lbl { display: block; color: var(--muted); font-size: 15px; margin: 0 0 4px; }
+.when { margin: -4px 0 12px; }
+.time { display: inline-flex; flex-direction: column; }
+.t-big { font-weight: 600; }
+.t-small { color: var(--muted); font-size: 14px; }
+.hint.empty { margin: 12px 0; }
+
+.rows { list-style: none; margin: 8px 0 0; padding: 0; }
+.rows li { border-bottom: 1px solid var(--line); }
+.row {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 0;
+  font: inherit;
+  text-align: left;
+  color: var(--fg);
+  background: none;
+  border: 0;
+}
+.row-main { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.row-title, .row-sub { overflow-wrap: anywhere; }
+.row-sub { color: var(--muted); font-size: 15px; }
+.row-side { display: flex; flex-direction: column; align-items: flex-end; flex: 0 1 auto; text-align: right; font-size: 16px; max-width: 50%; }
+.row-side .amount { font-weight: 600; white-space: nowrap; }
+
+.block { margin: 20px 0 8px; }
+.block-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.total { font-weight: 700; font-size: 22px; white-space: nowrap; }
+.wallet-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 10px 0; }
+.wallet-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  min-width: 0; padding: 12px; font: inherit; text-align: left;
+  color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 14px;
+}
+.wallet-name { color: var(--muted); font-size: 15px; overflow-wrap: anywhere; }
+.balance { font-size: 20px; font-weight: 700; overflow-wrap: anywhere; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.chip { min-height: 40px; padding: 6px 14px; font: inherit; font-size: 16px; color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 20px; }
+.chip[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+
+.sheet { position: fixed; inset: 0; z-index: 10; overflow-y: auto; background: var(--bg); -webkit-overflow-scrolling: touch; }
+.sheet-body {
+  max-width: 720px; margin: 0 auto;
+  padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
+    calc(32px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+}
+body.sheet-open { overflow: hidden; }
+@media (min-width: 720px) { .wallet-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

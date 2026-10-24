@@ -7,13 +7,18 @@ export interface WalletRef {
   aliases?: string[];
 }
 
+/** A default wallet also has a STABLE id, so a renamed wallet keeps its spoken aliases. */
+export interface DefaultWallet extends WalletRef {
+  id: string;
+}
+
 /** Default wallets with their spoken aliases (stems, so every case form matches). */
-export const DEFAULT_WALLETS: WalletRef[] = [
-  { name: 'Наличные', aliases: ['наличн', 'наличк', 'налик'] },
-  { name: 'Вклад', aliases: ['вклад'] },
-  { name: 'Золотая карта', aliases: ['золот'] },
-  { name: 'Серебряная карта', aliases: ['серебрян'] },
-  { name: 'Тинькофф', aliases: ['тиньк', 'тиньков', 'т-банк', 'тбанк'] },
+export const DEFAULT_WALLETS: DefaultWallet[] = [
+  { id: 'cash', name: 'Наличные', aliases: ['наличн', 'наличк', 'налик'] },
+  { id: 'deposit', name: 'Вклад', aliases: ['вклад'] },
+  { id: 'gold', name: 'Золотая карта', aliases: ['золот'] },
+  { id: 'silver', name: 'Серебряная карта', aliases: ['серебрян'] },
+  { id: 'tinkoff', name: 'Тинькофф', aliases: ['тиньк', 'тиньков', 'т-банк', 'тбанк'] },
 ];
 
 /** Moscow offset in minutes: every parsed time is interpreted in MSK regardless of the phone zone. */
@@ -21,3 +26,12 @@ export const MSK_OFFSET_MIN = 180;
 
 /** Time used when a date is said without an hour (MSK). */
 export const DEFAULT_HOUR_MSK = 12;
+
+/** Shown on the settings screen. */
+export const APP_VERSION = '0.2.0';
+
+/** A record with the same raw text saved within this window counts as "already saved" (opening one link twice). */
+export const DUPLICATE_WINDOW_MIN = 10;
+
+/** How many latest operations the money screen lists. */
+export const RECENT_OPERATIONS = 15;
