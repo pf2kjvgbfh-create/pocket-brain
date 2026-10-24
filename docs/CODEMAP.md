@@ -1,6 +1,6 @@
 # CODEMAP — where things live
 
-Updated: stage 2 (storage + UI).
+Updated: stage 3 (reminder hand-off).
 
 ## App
 - `index.html`, `src/main.ts`, `src/style.css`: the app shell (tabs, service worker registration).
@@ -17,6 +17,8 @@ Updated: stage 2 (storage + UI).
 - `src/money/`: `format.ts` (own «1 234,50 ₽» formatter and ruble-string -> kopecks parser, no Intl), `totals.ts` (pure math, rules below).
 - `src/time/format.ts`: the ONE `formatMsk(utcIso)` (big «23.10 19:00 МСК», small «у тебя 12:00» only when the device zone differs) + MSK helpers for the date-time input. All UI times go through it (`timeEl` in `ui/dom.ts`).
 - `src/ui/`: `intake.ts` (`#t=` read once + `replaceState`, listeners for load / `hashchange` / `pageshow`, duplicate guard), `card-model.ts` (parser result / record <-> card state, «Понял так» sentence; pure), `card.ts` (the editable card), `new-screen.ts` («Новое»), `lists.ts` («Дела», «Мысли»), `money-screen.ts`, `wallet-editor.ts`, `rows.ts`, `settings-screen.ts` (version only), `app.ts` (shared context, sheet, edit-record), `dom.ts`.
+- `src/shortcut/payload.ts`: `buildPayload(record, now)` -> `{ title, due, due_local, due_msk, repeat }` (null without a date; subscription = next occurrence via `subscriptionNextDue`; `due` is formatted from UTC getters at +03:00, `due_local` from the device zone) and `buildShortcutUrl(payload)` (`shortcuts://run-shortcut?...`, `encodeURIComponent` only). Format: `docs/shortcut-payload.md`; the Shortcut name is `SHORTCUT_NAME` in `config.ts`.
+- `src/ui/remind.ts`: `remindBlock(record, now)`: the «Поставить напоминание» link + hint (a plain `<a href>`), used in the «Сохранено» screen (`new-screen.ts`) and in the edit sheet (`card.ts` option `remindFor`, from `app.ts`).
 - `test/index.html` + `src/test-*.ts`: the iPhone test page (`/pocket-brain/test/`).
 
 ## Money rules (src/money/totals.ts)
@@ -30,6 +32,7 @@ Updated: stage 2 (storage + UI).
 - `tests/fixtures/phrases.ru.json`: the 50 reference phrases. This is the parser spec and the stage 5 model evaluation set. Fixed `now` = 2026-10-22T09:00:00Z.
 - `tests/parser.test.ts`: one test per phrase, invariants (raw text kept, unknown → idea), timing (< 50 ms per phrase).
 - `tests/sw-lib.test.ts`: service worker helpers. `tests/db.test.ts` (fake-indexeddb), `totals.test.ts`, `time-format.test.ts`, `money-format.test.ts`, `intake.test.ts` (hash, duplicate guard, card model).
+- `tests/shortcut.test.ts`: payload offset (TZ-dependent `due_local`), JSON/URL round-trip. `e2e/shortcut.spec.ts`: button URL and payload (a test-side click listener cancels the `shortcuts://` navigation and records the href).
 - `e2e/shell.spec.ts`, `e2e/app.spec.ts`: Playwright (WebKit + Chromium); app flows: link -> card -> save, no duplicates, wallets, totals, ideas.
 - `pnpm test`: unit tests. `pnpm test:tz`: the same tests under `TZ=UTC` and `TZ=America/New_York` (`scripts/test-tz.mjs`).
 

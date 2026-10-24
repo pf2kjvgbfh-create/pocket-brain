@@ -49,6 +49,7 @@ export function editRecord(app: App, rec: RecordRow): void {
     wallets: app.wallets,
     now: app.now,
     editing: true,
+    remindFor: rec,
     onSave: (updated) => {
       void app.db.putRecord(updated).then(done);
     },

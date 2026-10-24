@@ -114,6 +114,9 @@ input, select {
 .time { display: inline-flex; flex-direction: column; }
 .t-big { font-weight: 600; }
 .t-small { color: var(--muted); font-size: 14px; }
+.hint.small { font-size: 14px; margin: 6px 0 0; }
+.remind { margin: 16px 0 0; }
+.remind .btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 .hint.empty { margin: 12px 0; }
 
 .rows { list-style: none; margin: 8px 0 0; padding: 0; }

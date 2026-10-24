@@ -7,6 +7,7 @@ import { renderCard } from './card';
 import { KIND_LABEL, stateFromParse, stateFromRecord } from './card-model';
 import { h } from './dom';
 import { intakeText } from './intake';
+import { remindBlock } from './remind';
 
 const TAB_OF_KIND: Record<Kind, { tab: string; name: string }> = {
   reminder: { tab: 'todo', name: 'Дела' },
@@ -53,6 +54,7 @@ export function createNewScreen(app: App, root: HTMLElement): NewScreen {
     root.replaceChildren(
       h('h1', {}, 'Новое'),
       h('p', { class: 'notice', role: 'status', 'data-testid': 'saved' }, `Сохранено: ${KIND_LABEL[rec.kind].toLowerCase()}`),
+      ...[remindBlock(rec, app.now())].filter((el): el is HTMLElement => el !== null),
       h('div', { class: 'actions' }, again, open),
     );
   };

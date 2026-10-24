@@ -4,6 +4,7 @@ import { fromMskInput } from '../time/format';
 import { KINDS, KIND_FIELDS, KIND_LABEL, recordFromState, understoodSentence, type CardState, type FieldName } from './card-model';
 import type { Kind } from '../db/types';
 import { h, timeEl } from './dom';
+import { remindBlock } from './remind';
 
 export interface CardOptions {
   state: CardState;
@@ -13,6 +14,8 @@ export interface CardOptions {
   notice?: string;
   /** Existing record: shows «Удалить» (with an in-page confirm). */
   editing: boolean;
+  /** Existing saved record: «Поставить напоминание» is built from it (time edits apply after «Сохранить»). */
+  remindFor?: RecordRow;
   onSave: (record: RecordRow) => void;
   onCancel: () => void;
   onDelete?: () => void;
@@ -147,6 +150,7 @@ export function renderCard(opts: CardOptions): HTMLElement {
     h('p', { class: 'raw' }, `Ты сказал: «${state.rawText}»`),
     row('Тип', kindSelect),
     fieldsBox,
+    opts.remindFor ? remindBlock(opts.remindFor, opts.now()) : null,
     actions,
   );
 }

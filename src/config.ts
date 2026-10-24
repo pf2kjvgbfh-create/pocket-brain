@@ -35,3 +35,6 @@ export const DUPLICATE_WINDOW_MIN = 10;
 
 /** How many latest operations the money screen lists. */
 export const RECENT_OPERATIONS = 15;
+
+/** Name of the iPhone Shortcut the owner builds by hand (SETUP section 4). Never rename without updating SETUP. */
+export const SHORTCUT_NAME = 'Мозг-напомнить';
