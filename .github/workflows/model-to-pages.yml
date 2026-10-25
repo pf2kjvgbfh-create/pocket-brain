@@ -1,0 +1,29 @@
+# Puts the model shards onto the live site from INSIDE GitHub. They are uploaded once from the laptop as release files:
+# a git push of one ~90 MB shard from the laptop is cut off by GitHub (HTTP 408 after ~90 s), see DECISIONS.md.
+# After this run, `node scripts/deploy.mjs` finds the same files on gh-pages and does not upload them again.
+name: model-to-pages
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: gh-pages
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    env:
+      TAG: model-qwen3-0.6b-q4km-v1
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 1
+      - name: Add the shards on top of the current site
+        run: |
+          mkdir -p model
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.gguf' --dir model --clobber
+          ls -l model
+          git add model
+          git -c user.name=pocket-brain-deploy -c user.email=deploy@localhost commit -q -m "model shards from release $TAG"
+          git push origin HEAD:gh-pages
