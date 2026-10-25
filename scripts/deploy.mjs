@@ -67,10 +67,14 @@ try {
   run('git', ['init', '-q', '-b', 'gh-pages'], tmp);
   // Fetch the current site first: files that did not change (above all the model shards, ~360 MB) are then already
   // known to the remote and are not uploaded again. The new commit is still an orphan, so no history piles up.
+  // Partial fetch: the file list and the small files only (~300 KB); downloading the 380 MB site broke off mid-way.
+  run('git', ['remote', 'add', 'origin', remote], tmp);
+  run('git', ['config', 'remote.origin.promisor', 'true'], tmp);
+  run('git', ['config', 'remote.origin.partialclonefilter', 'blob:limit=1m'], tmp);
   try {
-    execFileSync('git', ['fetch', '-q', '--depth', '1', remote, 'gh-pages'], { cwd: tmp, stdio: 'inherit' });
+    execFileSync('git', ['fetch', '-q', '--depth', '1', 'origin', 'gh-pages'], { cwd: tmp, stdio: 'inherit' });
   } catch {
-    console.log('no gh-pages yet: full upload');
+    console.log('could not fetch gh-pages (none yet, or no network): full upload');
   }
   // One push of ~380 MB times out at GitHub (HTTP 408). So the big files go first, one per push, to a temporary
   // branch; the real orphan commit then only uploads what is left, and the temporary branch is deleted.
@@ -92,15 +96,15 @@ try {
   for (const file of big) {
     run('git', ['add', '--', file], tmp);
     commit(tmp, `upload ${relative(tmp, file)}`);
-    run('git', ['-c', 'http.postBuffer=524288000', 'push', '--force', remote, `HEAD:refs/heads/${UPLOAD_BRANCH}`], tmp);
+    run('git', ['-c', 'http.postBuffer=524288000', 'push', '--force', '--no-thin', 'origin', `HEAD:refs/heads/${UPLOAD_BRANCH}`], tmp);
   }
   if (big.length > 0) run('git', ['update-ref', '-d', 'HEAD'], tmp); // the site commit stays an orphan
   run('git', ['add', '-A'], tmp);
   commit(tmp, `deploy ${sha}`);
-  run('git', ['-c', 'http.postBuffer=524288000', 'push', '--force', remote, 'gh-pages'], tmp);
+  run('git', ['-c', 'http.postBuffer=524288000', 'push', '--force', '--no-thin', 'origin', 'gh-pages'], tmp);
   // Always: a run that failed after an upload leaves the temporary branch behind. No branch = nothing to delete.
   try {
-    execFileSync('git', ['push', '-q', remote, '--delete', UPLOAD_BRANCH], { cwd: tmp, stdio: 'ignore' });
+    execFileSync('git', ['push', '-q', 'origin', '--delete', UPLOAD_BRANCH], { cwd: tmp, stdio: 'ignore' });
   } catch {
     // not there
   }
