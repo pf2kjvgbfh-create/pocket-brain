@@ -1,4 +1,5 @@
 // App entry: opens the database, renders the screens, wires tabs, the `#t=` link and the service worker.
+import { createBackupController } from './backup/runner';
 import { PocketDb } from './db/db';
 import { sortWallets } from './db/wallets';
 import type { App } from './ui/app';
@@ -46,7 +47,12 @@ async function boot(): Promise<void> {
     },
   };
   await app.refresh();
-  renderSettings(screen('settings'));
+  // Backup: fire-and-forget after every committed records/wallets write, on open (online) and when the network comes back.
+  const backup = createBackupController({ db, fetch: (...a) => fetch(...a) });
+  db.setOnChange(() => backup.trigger());
+  window.addEventListener('online', () => backup.trigger());
+  if (navigator.onLine) backup.trigger();
+  renderSettings(screen('settings'), app, backup);
   const newScreen = createNewScreen(app, screen('new'));
   const hasLink = extractHashText(window.location.hash) !== null;
   installHashListeners((text) => void newScreen.openText(text, true));

@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:tz": "node scripts/test-tz.mjs",
     "e2e": "playwright test",
+    "check:build": "node scripts/check-build.mjs",
     "deploy": "node scripts/deploy.mjs"
   },
   "dependencies": {

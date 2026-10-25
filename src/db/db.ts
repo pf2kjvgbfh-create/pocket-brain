@@ -10,6 +10,21 @@ interface SettingRow {
 export class PocketDb {
   private constructor(private readonly db: IDBDatabase) {}
 
+  /** Called after a records/wallets write has committed (the backup hooks in here). Its errors never reach the writer. */
+  private onChange: (() => void) | null = null;
+
+  setOnChange(cb: (() => void) | null): void {
+    this.onChange = cb;
+  }
+
+  private changed(): void {
+    try {
+      this.onChange?.();
+    } catch (err) {
+      console.warn('change hook failed', err instanceof Error ? err.name : 'error');
+    }
+  }
+
   /** `factory` and `migrations` are injectable for tests. */
   static async open(
     name = 'pocket-brain',
@@ -51,7 +66,14 @@ export class PocketDb {
   putRecord(r: RecordRow): Promise<void> {
     return this.run(['records'], 'readwrite', async (s) => {
       await req(s('records').put(r));
-    });
+    }).then(() => this.changed());
+  }
+
+  /** Restore: write several records and wallets in ONE transaction (all or nothing). */
+  putMany(records: RecordRow[], wallets: WalletRow[]): Promise<void> {
+    return this.run(['records', 'wallets'], 'readwrite', async (s) => {
+      await Promise.all([...records.map((r) => req(s('records').put(r))), ...wallets.map((w) => req(s('wallets').put(w)))]);
+    }).then(() => this.changed());
   }
 
   /** Save a record and drop its draft in ONE transaction: either both happen or neither. */
@@ -60,7 +82,7 @@ export class PocketDb {
       const puts = req(s('records').put(r));
       const del = req(s('drafts').delete(draftId));
       await Promise.all([puts, del]);
-    });
+    }).then(() => this.changed());
   }
 
   getRecord(id: string): Promise<RecordRow | undefined> {
@@ -84,6 +106,9 @@ export class PocketDb {
       if (!row) return false;
       await req(s('records').put({ ...row, deleted: true, updated_utc: nowIso }));
       return true;
+    }).then((found) => {
+      if (found) this.changed();
+      return found;
     });
   }
 
@@ -105,7 +130,7 @@ export class PocketDb {
   putWallet(w: WalletRow): Promise<void> {
     return this.run(['wallets'], 'readwrite', async (s) => {
       await req(s('wallets').put(w));
-    });
+    }).then(() => this.changed());
   }
 
   // ---- settings ----

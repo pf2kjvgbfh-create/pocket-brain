@@ -28,7 +28,7 @@ export const MSK_OFFSET_MIN = 180;
 export const DEFAULT_HOUR_MSK = 12;
 
 /** Shown on the settings screen. */
-export const APP_VERSION = '0.2.0';
+export const APP_VERSION = '0.4.0';
 
 /** A record with the same raw text saved within this window counts as "already saved" (opening one link twice). */
 export const DUPLICATE_WINDOW_MIN = 10;
@@ -38,3 +38,25 @@ export const RECENT_OPERATIONS = 15;
 
 /** Name of the iPhone Shortcut the owner builds by hand (SETUP section 4). Never rename without updating SETUP. */
 export const SHORTCUT_NAME = 'Мозг-напомнить';
+
+/** GitHub backup (stage 4). The token is typed by the owner into Settings and lives only in the settings store. */
+export const BACKUP = {
+  owner: 'pf2kjvgbfh-create',
+  repo: 'pocket-brain-data',
+  mainPath: 'data/pocket-brain.json',
+  /** `YYYY-MM` is replaced with the UTC month of `created_utc`. */
+  monthPathPattern: 'data/records-YYYY-MM.json',
+  /** Above this many UTF-8 bytes the backup is split by month. */
+  splitBytes: 1_000_000,
+  maxRetries: 3,
+  backoffMs: [500, 1500, 3000],
+  /** One request must not hang forever: a stuck request would block every later backup. */
+  timeoutMs: 30_000,
+  apiVersion: '2022-11-28',
+} as const;
+
+/**
+ * Settings keys that may be written to a backup or an export. Everything else (above all the token) is left out.
+ * Empty for now: no setting is worth restoring yet. Add a key here on purpose, never by accident.
+ */
+export const BACKUP_SETTING_KEYS: readonly string[] = [];

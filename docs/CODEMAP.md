@@ -1,6 +1,6 @@
 # CODEMAP — where things live
 
-Updated: stage 3 (reminder hand-off).
+Updated: stage 4 (GitHub backup, restore, export).
 
 ## App
 - `index.html`, `src/main.ts`, `src/style.css`: the app shell (tabs, service worker registration).
@@ -18,6 +18,9 @@ Updated: stage 3 (reminder hand-off).
 - `src/time/format.ts`: the ONE `formatMsk(utcIso)` (big «23.10 19:00 МСК», small «у тебя 12:00» only when the device zone differs) + MSK helpers for the date-time input. All UI times go through it (`timeEl` in `ui/dom.ts`).
 - `src/ui/`: `intake.ts` (`#t=` read once + `replaceState`, listeners for load / `hashchange` / `pageshow`, duplicate guard), `card-model.ts` (parser result / record <-> card state, «Понял так» sentence; pure), `card.ts` (the editable card), `new-screen.ts` («Новое»), `lists.ts` («Дела», «Мысли»), `money-screen.ts`, `wallet-editor.ts`, `rows.ts`, `settings-screen.ts` (version only), `app.ts` (shared context, sheet, edit-record), `dom.ts`.
 - `src/shortcut/payload.ts`: `buildPayload(record, now)` -> `{ title, due, due_local, due_msk, repeat }` (null without a date; subscription = next occurrence via `subscriptionNextDue`; `due` is formatted from UTC getters at +03:00, `due_local` from the device zone) and `buildShortcutUrl(payload)` (`shortcuts://run-shortcut?...`, `encodeURIComponent` only). Format: `docs/shortcut-payload.md`; the Shortcut name is `SHORTCUT_NAME` in `config.ts`.
+- `src/backup/` (stage 4, GitHub copy): `serialize.ts` (ALLOWLIST of record/wallet/settings fields; `BACKUP_SETTING_KEYS` in `config.ts`; the token key is refused; `parseBackup` + `sanitize*` for untrusted input), `split.ts` (> `BACKUP.splitBytes` -> `data/records-YYYY-MM.json` by UTC month of `created_utc`, main file keeps wallets/settings/`months`; `fingerprint` = SHA-256 without `exported_utc` to skip unchanged files), `github.ts` (contents API client, injectable `fetch`, GET sha -> PUT base64 UTF-8, 409/422 retry with backoff, error kinds -> Russian messages, logs only status+path), `queue.ts` (single flight + coalescing), `runner.ts` (`createBackupController`: status, `LINKED_KEY` guard against overwriting an existing copy from a new phone), `restore.ts` (`loadRemote`, `mergeBackup`, `applyMerge`), `export.ts` (share sheet or Blob download), `source.ts`, `token.ts`. `PocketDb.setOnChange` fires after every committed records/wallets write (that is the backup trigger); `putMany` = restore in one transaction.
+- Token storage: IndexedDB `settings` store, key `github_token` (`token.ts`). Read only by the backup runner, the restore button and `hasToken` (yes/no for the screen). Other settings keys: `backup_last_ok_utc`, `backup_hashes`, `backup_linked`.
+- `src/ui/backup-panel.ts` (token field, status, restore with in-page confirm, export), `src/ui/settings-screen.ts`.
 - `src/ui/remind.ts`: `remindBlock(record, now)`: the «Поставить напоминание» link + hint (a plain `<a href>`), used in the «Сохранено» screen (`new-screen.ts`) and in the edit sheet (`card.ts` option `remindFor`, from `app.ts`).
 - `test/index.html` + `src/test-*.ts`: the iPhone test page (`/pocket-brain/test/`).
 
@@ -34,12 +37,14 @@ Updated: stage 3 (reminder hand-off).
 - `tests/sw-lib.test.ts`: service worker helpers. `tests/db.test.ts` (fake-indexeddb), `totals.test.ts`, `time-format.test.ts`, `money-format.test.ts`, `intake.test.ts` (hash, duplicate guard, card model).
 - `tests/shortcut.test.ts`: payload offset (TZ-dependent `due_local`), JSON/URL round-trip. `e2e/shortcut.spec.ts`: button URL and payload (a test-side click listener cancels the `shortcuts://` navigation and records the href).
 - `e2e/shell.spec.ts`, `e2e/app.spec.ts`: Playwright (WebKit + Chromium); app flows: link -> card -> save, no duplicates, wallets, totals, ideas.
+- `tests/backup-*.test.ts` (serializer, split/restore, GitHub client, queue/controller, merge, export) with `tests/helpers/fake-repo.ts` (in-memory fake of the contents API with sha, failure injection, in-flight counter; FAKE token only). `e2e/backup.spec.ts` mocks `https://api.github.com/**` with `page.route` on the same fake (service workers blocked in that spec, otherwise WebKit sends requests to the real network; the spec checks every api.github.com request was answered by the mock).
 - `pnpm test`: unit tests. `pnpm test:tz`: the same tests under `TZ=UTC` and `TZ=America/New_York` (`scripts/test-tz.mjs`).
 
 ## Scripts
 - `scripts/build-sw.mjs`, `sw-lib.mjs`, `sw.template.js`: service worker generation after `vite build`.
 - `scripts/deploy.mjs`: build and push to the `gh-pages` branch.
 - `scripts/test-tz.mjs`: the time zone test runner.
+- `scripts/check-build.mjs` (`pnpm check:build`, run after `pnpm build`): fails if the shipped app files contain `github_pat`/`ghp_`-style tokens or a URL host other than `api.github.com` (and `www.w3.org` XML namespaces). Stage 5: loading the model from the app will need its host added to `ALLOWED_HOSTS` with a reason.
 
 ## Docs
 - `docs/iphone-test.md`: the phone test spec. Decisions are in `DECISIONS.md` and status is in `STATUS.md` (root).
