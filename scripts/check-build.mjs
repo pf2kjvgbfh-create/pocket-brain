@@ -11,6 +11,15 @@ const ALLOWED_HOSTS = new Map([
   ['www.w3.org', 'XML namespace strings (e.g. http://www.w3.org/2000/svg); never fetched'],
 ]);
 
+// Hosts that appear only inside the wllama library chunk (stage 5) and are never contacted; e2e/model.spec.ts checks
+// at runtime that loading and running the model requests nothing outside our own site.
+const WLLAMA_HOSTS = new Map([
+  ['cdn.jsdelivr.net', 'wllama default compat files; replaced by our own copies through setCompat() in src/model/engine.ts'],
+  ['huggingface.co', 'wllama loadModelFromHF(), which the app never calls (shards come from our own site)'],
+  ['github.com', 'source comments inside the embedded worker code'],
+]);
+const isWllamaChunk = (text) => text.includes('@wllama/wllama-compat');
+
 const SECRET_PATTERNS = [/github_pat/, /ghp_[A-Za-z0-9]/, /gho_[A-Za-z0-9]/, /ghs_[A-Za-z0-9]/, /ghu_[A-Za-z0-9]/];
 const TEXT_EXT = new Set(['.js', '.mjs', '.html', '.css', '.json', '.svg', '.webmanifest', '.txt', '.map']);
 
@@ -55,13 +64,14 @@ for (const rel of [...reach].sort()) {
   for (const m of text.matchAll(/https?:\/\/([A-Za-z0-9.-]+)/g)) {
     const host = m[1].toLowerCase();
     seenHosts.set(host, (seenHosts.get(host) ?? new Set()).add(rel));
-    if (!ALLOWED_HOSTS.has(host)) problems.push(`${rel}: external host ${host}`);
+    if (!ALLOWED_HOSTS.has(host) && !(WLLAMA_HOSTS.has(host) && isWllamaChunk(text))) problems.push(`${rel}: external host ${host}`);
   }
 }
 
 console.log(`check:build scanned ${scanned} text files reachable from the app (skipped dist/test/, the test page's chunks and .wasm)`);
 for (const [host, files] of seenHosts) {
-  console.log(`  host ${host}: ${ALLOWED_HOSTS.has(host) ? 'allowed' : 'NOT ALLOWED'} (${[...files].join(', ')})`);
+  const status = ALLOWED_HOSTS.has(host) ? 'allowed' : WLLAMA_HOSTS.has(host) ? 'wllama chunk only' : 'NOT ALLOWED';
+  console.log(`  host ${host}: ${status} (${[...files].join(', ')})`);
 }
 if (problems.length > 0) {
   for (const p of problems) console.error(`FAIL ${p}`);

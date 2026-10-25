@@ -10,7 +10,7 @@ const wallets: WalletRow[] = DEFAULT_WALLETS.map((w) => ({ id: w.id, name: w.nam
 const refs = walletRefs(wallets);
 
 const rec = (over: Partial<RecordRow>): RecordRow => ({
-  id: 'r1', kind: 'idea', raw_text: 'кофе 300', fields: {}, wallet_id: null, due_utc: null,
+  id: 'r1', kind: 'idea', raw_text: '300 кофе', fields: {}, wallet_id: null, due_utc: null,
   created_utc: NOW.toISOString(), updated_utc: NOW.toISOString(), deleted: false, ...over,
 });
 
@@ -40,17 +40,17 @@ describe('keywordStems', () => {
 });
 
 describe('learning from an edit', () => {
-  it('«кофе 300» edited to a wallet: the next «кофе 250» gets that wallet and becomes an expense', () => {
+  it('«300 кофе» (rules: an idea) edited to a wallet: the next «250 кофе» gets that wallet and becomes an expense', () => {
     const learned = learnFromEdit({
       before: rec({}), after: rec({ kind: 'expense', wallet_id: 'gold' }), learned: {}, wallets, now: later(1),
     });
     expect(learned['кофе|idea']).toEqual({ to_kind: 'expense', wallet_id: 'gold', updated_utc: later(1).toISOString() });
-    const next = run('кофе 250', learned);
+    const next = run('250 кофе', learned);
     expect(next.kind).toBe('expense');
     expect(next.fields.wallet).toBe('Золотая карта');
     expect(next.fields.amount_minor).toBe(25000);
     expect(next.fields.title).toBe('кофе');
-    expect(next.raw_text).toBe('кофе 250');
+    expect(next.raw_text).toBe('250 кофе');
   });
 
   it('«яндекс плюс 299» (idea) edited to a subscription: «яндекс музыка 199» becomes a subscription', () => {
@@ -85,8 +85,8 @@ describe('learning from an edit', () => {
       'кофе|idea': { to_kind: 'expense', wallet_id: 'gold', updated_utc: later(1).toISOString() },
       'старба|idea': { to_kind: 'expense', wallet_id: 'silver', updated_utc: later(2).toISOString() },
     };
-    expect(run('кофе в старбакс 300', learned).fields.wallet).toBe('Серебряная карта');
-    expect(run('кофе дома 300', learned).fields.wallet).toBe('Золотая карта');
+    expect(run('300 кофе в старбакс', learned).fields.wallet).toBe('Серебряная карта');
+    expect(run('300 кофе дома', learned).fields.wallet).toBe('Золотая карта');
   });
 
   it('only the rules kind matters: an entry for another kind does not apply', () => {

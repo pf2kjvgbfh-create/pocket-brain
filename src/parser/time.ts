@@ -12,14 +12,20 @@ export interface FoundTime extends Span {
 }
 
 /** The same MSK calendar day as `instant`, at hh:mm MSK. */
-function atMskTime(instant: Date, hh: number, mm: number): Date {
+export function atMskTime(instant: Date, hh: number, mm: number): Date {
   const msk = new Date(instant.getTime() + OFFSET_MS);
   return new Date(Date.UTC(msk.getUTCFullYear(), msk.getUTCMonth(), msk.getUTCDate(), hh, mm) - OFFSET_MS);
 }
 
 /** All chrono (ru) matches; a date without an hour gets DEFAULT_HOUR_MSK. */
+/**
+ * chrono reads a lone duration as «from now»: «ремонт часов» → in an hour, «5 минут славы» → in 5 minutes.
+ * Without «через» it is not a time; «через час» keeps «через» in the match and passes.
+ */
+const BARE_DURATION_RE = /^(?:\d+\s+|пол)?(?:секунд|минут|час|недел|месяц|год|лет)\p{L}*$/iu;
+
 export function findTimes(text: string, now: Date): FoundTime[] {
-  const results = ru.parse(text, { instant: now, timezone: MSK_OFFSET_MIN }, { forwardDate: true });
+  const results = ru.parse(text, { instant: now, timezone: MSK_OFFSET_MIN }, { forwardDate: true }).filter((r) => !BARE_DURATION_RE.test(r.text));
   return results.map((r) => {
     const certainHour = r.start.isCertain('hour');
     const date = certainHour ? r.start.date() : atMskTime(r.start.date(), DEFAULT_HOUR_MSK, 0);

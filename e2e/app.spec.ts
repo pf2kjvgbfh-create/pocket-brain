@@ -239,7 +239,7 @@ test('no wallet in the phrase: the last used wallet; the first ever default is c
 
 test('corrections memory: an edited wallet is applied to the next similar phrase (not the last wallet)', async ({ page }) => {
   await page.goto('./');
-  await addTyped(page, 'кофе 300');
+  await addTyped(page, '300 кофе');
   await expect(toast(page)).toContainText('Записал: мысль');
   await toast(page).locator('[data-action="edit"]').click();
   const sheet = page.locator('.sheet');
@@ -250,13 +250,13 @@ test('corrections memory: an edited wallet is applied to the next similar phrase
   await expect(sheet).toHaveCount(0);
   // Another wallet becomes the last one; the learned wallet must still win for «кофе».
   await addTyped(page, 'купил воду за 500 серебряная карта');
-  await addTyped(page, 'кофе 250');
+  await addTyped(page, '250 кофе');
   await expect(toast(page)).toContainText('Записал: расход 250,00 ₽, Золотая карта');
   await tab(page, 'Деньги');
   await expect.poll(() => text(page.locator('[data-wallet-id="gold"] .balance'))).toBe(rub(-55000));
   await expect.poll(() => text(page.locator('[data-wallet-id="silver"] .balance'))).toBe(rub(-50000));
   await page.reload(); // the memory is stored, not kept in the page
-  await addTyped(page, 'кофе 100');
+  await addTyped(page, '100 кофе');
   await expect(toast(page)).toContainText('Записал: расход 100,00 ₽, Золотая карта');
 });
 

@@ -3,13 +3,13 @@
 import type { WalletRef } from '../config';
 import { fold, normalize } from './normalize';
 import { findTags, ideaFallback, ideaPrefixRule } from './rules/idea';
-import { reminderExplicitRule, reminderImplicitRule } from './rules/reminder';
+import { reminderDayPartRule, reminderExplicitRule, reminderImplicitRule } from './rules/reminder';
 import { transferRule } from './rules/transfer';
 import { heldRule } from './rules/held';
 import { depositRule } from './rules/deposit';
 import { subscriptionRule } from './rules/subscription';
 import { incomeRule } from './rules/income';
-import { expenseExplicitRule, expenseImplicitRule } from './rules/expense';
+import { expenseExplicitRule, expenseImplicitRule, expenseShortRule } from './rules/expense';
 import type { ParseContext, ParsedFields, ParseResult, Rule, RuleMatch } from './types';
 
 export type { Kind, ParsedFields, ParseResult } from './types';
@@ -26,6 +26,8 @@ const RULES: Rule[] = [
   expenseExplicitRule,
   reminderImplicitRule,
   expenseImplicitRule,
+  reminderDayPartRule,
+  expenseShortRule,
 ];
 
 /** Drop empty fields so the card only shows what was understood. */

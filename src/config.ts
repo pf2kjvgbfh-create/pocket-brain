@@ -73,3 +73,15 @@ export const TOAST_SHORT_MS = 2500;
 
 /** Corrections memory: the most entries kept; the oldest are dropped first. */
 export const LEARNED_MAX = 500;
+
+
+/** The local model (stage 5, docs/model-eval.md). Shards live in public/model/; OFF by default (Settings). */
+export const MODEL = {
+  firstShard: 'qwen3-0.6b-q4_k_m-00001-of-00004.gguf',
+  /** Shown on the Settings button (sum of the 4 shards, decimal MB). */
+  sizeMb: 357,
+  /** Qwen3: no <think> block. */
+  noThinking: true,
+  contextTokens: 1024,
+  maxTokens: 24,
+} as const;

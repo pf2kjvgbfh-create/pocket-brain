@@ -60,7 +60,7 @@ describe('buildAutoRecord', () => {
 
   it('a learned kind and wallet apply to a bare phrase', () => {
     const learned: Learned = { 'кофе|idea': { to_kind: 'expense', wallet_id: 'gold', updated_utc: NOW.toISOString() } };
-    const { record } = build('кофе 250', { lastWalletId: 'cash', learned });
+    const { record } = build('250 кофе', { lastWalletId: 'cash', learned });
     expect(record).toMatchObject({ kind: 'expense', wallet_id: 'gold' });
     expect(record.fields).toMatchObject({ amount_minor: 25000, title: 'кофе' });
     expect(record.refine).toBeUndefined();
@@ -82,7 +82,7 @@ describe('buildAutoRecord', () => {
     expect(record.fields.to_wallet_id).toBe('cash');
     // A transfer that only the corrections memory made: no wallets in the phrase, so the source gets the default.
     const learned: Learned = { 'пятни|idea': { to_kind: 'transfer', updated_utc: NOW.toISOString() } };
-    const bare = build('пятнице 5000', { lastWalletId: 'silver', learned }).record;
+    const bare = build('5000 к пятнице', { lastWalletId: 'silver', learned }).record;
     expect(bare).toMatchObject({ kind: 'transfer', wallet_id: 'silver' });
     expect(bare.fields.to_wallet_id).toBeUndefined();
   });

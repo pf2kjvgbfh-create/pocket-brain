@@ -1,11 +1,11 @@
-// Deposits: «вклад» (opened / topped up), amount, rate and term.
+// Deposits: «вклад» or «накопительный счёт» (opened / topped up), amount, rate and term.
 // The source wallet is any wallet mention other than the «вклад» word itself.
 import { findAmount, findRate, findTerm } from '../money';
 import { word } from '../text';
 import { findWallets, firstWallet } from '../wallets';
 import type { Rule, Span } from '../types';
 
-const MARKER_RE = word('вклад\\p{L}*', 'gu');
+const MARKER_RE = word('вклад\\p{L}*|накопительн\\p{L}*\\s+сч[её]т\\p{L}*', 'gu');
 
 export const depositRule: Rule = (ctx) => {
   const markers: Span[] = [...ctx.lower.matchAll(MARKER_RE)].map((m) => ({ start: m.index, end: m.index + m[0].length }));

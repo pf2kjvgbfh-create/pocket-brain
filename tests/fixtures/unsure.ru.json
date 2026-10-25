@@ -1,0 +1,27 @@
+{
+  "now": "2026-10-22T09:00:00Z",
+  "note": "Phrases the stage-1 rules did NOT understand (they fell back to idea with confidence 0.3 on 2026-10-25). Used by the stage-5 model evaluation (kind only). Names and amounts are invented.",
+  "phrases": [
+    { "text": "кофе с собой триста пятьдесят", "kind": "expense" },
+    { "text": "обед в столовой 420", "kind": "expense" },
+    { "text": "такси до дома 650", "kind": "expense" },
+    { "text": "заправка 2500", "kind": "expense" },
+    { "text": "стрижка 1200", "kind": "expense" },
+    { "text": "продуктов на 3400", "kind": "expense" },
+    { "text": "цветы 900", "kind": "expense" },
+    { "text": "бензин тысяча восемьсот", "kind": "expense" },
+    { "text": "репетитор по английскому 2000 за урок", "kind": "expense" },
+    { "text": "продал велосипед за 15000", "kind": "income" },
+    { "text": "подработка принесла 7000", "kind": "income" },
+    { "text": "сдал металлолом 1500", "kind": "income" },
+    { "text": "в субботу утром отвезти машину на сервис", "kind": "reminder" },
+    { "text": "к врачу послезавтра к девяти", "kind": "reminder" },
+    { "text": "вечером забрать ребёнка из садика", "kind": "reminder" },
+    { "text": "завтра днём оплатить штраф", "kind": "reminder" },
+    { "text": "положил на накопительный счёт 20000 под 16 процентов", "kind": "deposit" },
+    { "text": "маме на день рождения цветы", "kind": "idea" },
+    { "text": "хочу научиться играть на гитаре", "kind": "idea" },
+    { "text": "интересно попробовать бегать по утрам", "kind": "idea" },
+    { "text": "хорошо бы съездить летом на Байкал", "kind": "idea" }
+  ]
+}

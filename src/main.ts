@@ -2,6 +2,7 @@
 import { createBackupController } from './backup/runner';
 import { PocketDb } from './db/db';
 import { sortWallets } from './db/wallets';
+import { setupModel, type ModelSetup } from './model/setup';
 import type { App } from './ui/app';
 import { extractHashText, installHashListeners } from './ui/intake';
 import { renderIdeas, renderTodo } from './ui/lists';
@@ -44,15 +45,21 @@ async function boot(): Promise<void> {
       renderTodo(app, screen('todo'));
       renderMoney(app, screen('money'));
       renderIdeas(app, screen('ideas'));
+      // After every save or change: records the rules were unsure about go to the local model in the background
+      // (only when the owner turned it on; never awaited, so it never holds up saving).
+      void model?.refiner.run();
     },
   };
+  let model: ModelSetup | undefined;
   await app.refresh();
+  model = setupModel(app);
+  void model.refiner.run();
   // Backup: fire-and-forget after every committed records/wallets write, on open (online) and when the network comes back.
   const backup = createBackupController({ db, fetch: (...a) => fetch(...a) });
   db.setOnChange(() => backup.trigger());
   window.addEventListener('online', () => backup.trigger());
   if (navigator.onLine) backup.trigger();
-  renderSettings(screen('settings'), app, backup);
+  renderSettings(screen('settings'), app, backup, model.panel);
   const newScreen = createNewScreen(app, screen('new'));
   const hasLink = extractHashText(window.location.hash) !== null;
   installHashListeners((text) => void newScreen.openText(text, true));

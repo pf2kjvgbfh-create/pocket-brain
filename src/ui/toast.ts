@@ -21,6 +21,8 @@ export interface ToastOptions {
 
 let active: { el: HTMLElement; timer: ReturnType<typeof setTimeout> } | null = null;
 
+export const hasToast = (): boolean => active !== null;
+
 export function dismissToast(): void {
   if (!active) return;
   clearTimeout(active.timer);

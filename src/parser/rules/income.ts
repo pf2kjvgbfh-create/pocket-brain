@@ -1,11 +1,11 @@
-// Income: salary, «получил», «пришло», refunds, cashback. Needs an amount.
+// Income: salary, «получил», «пришло», refunds, cashback, «продал», «сдал», side jobs. Needs an amount.
 import { findAmount } from '../money';
 import { findSpan, word } from '../text';
 import { findWallets, firstWallet } from '../wallets';
 import type { Rule } from '../types';
 
 const MARKER_RE = word(
-  'получил\\p{L}*|отдал\\p{L}*\\s+мне|зарплат\\p{L}*|пришл\\p{L}*|пришел|заработал\\p{L}*|вернул\\p{L}*|кэшб[эе]к\\p{L}*|кешб[эе]к\\p{L}*|аванс\\p{L}*|преми\\p{L}*|доход\\p{L}*',
+  'получил\\p{L}*|продал\\p{L}*|сдал(?:а|и)?|принес(?:ла|ли)?|подработк\\p{L}*|отдал\\p{L}*\\s+мне|зарплат\\p{L}*|пришл\\p{L}*|пришел|заработал\\p{L}*|вернул\\p{L}*|кэшб[эе]к\\p{L}*|кешб[эе]к\\p{L}*|аванс\\p{L}*|преми\\p{L}*|доход\\p{L}*',
 );
 
 export const incomeRule: Rule = (ctx) => {
