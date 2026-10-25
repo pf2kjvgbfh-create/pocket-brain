@@ -1,10 +1,11 @@
 // Restore from GitHub: read the main file (+ month files), merge by id, newest `updated_utc` wins.
-import { BACKUP } from '../config';
+import { BACKUP, LAST_WALLET_KEY, LEARNED_KEY } from '../config';
 import type { PocketDb } from '../db/db';
 import type { RecordRow, WalletRow } from '../db/types';
+import { mergeLearned, sanitizeLearned } from '../parser/learned';
 import type { GithubClient } from './github';
 import { LINKED_KEY } from './runner';
-import { parseBackup, sanitizeList, type BackupFile } from './serialize';
+import { parseBackup, pickSettings, sanitizeList, type BackupFile } from './serialize';
 import { assembleBackup, monthPath } from './split';
 import { sanitizeRecord } from './serialize';
 
@@ -12,6 +13,8 @@ export interface Merged {
   /** Records to write: new ones and ones where the backup is newer. */
   records: RecordRow[];
   wallets: WalletRow[];
+  /** Allowlisted settings of the copy that passed validation (last wallet, corrections memory). */
+  settings: Record<string, unknown>;
   /** Live (not deleted) records in the backup: the number shown to the owner. */
   liveCount: number;
 }
@@ -38,8 +41,19 @@ export function mergeBackup(
   return {
     records,
     wallets: remote.wallets,
+    settings: pickSettings(remote.settings),
     liveCount: remote.records.filter((r) => !r.deleted).length,
   };
+}
+
+/** Validated settings from the copy. The corrections memory is merged by entry (newest wins), the last wallet is replaced. */
+async function applySettings(db: PocketDb, settings: Record<string, unknown>): Promise<void> {
+  const last = settings[LAST_WALLET_KEY];
+  if (typeof last === 'string') await db.setSetting(LAST_WALLET_KEY, last);
+  if (settings[LEARNED_KEY] !== undefined) {
+    const local = sanitizeLearned(await db.getSetting<unknown>(LEARNED_KEY));
+    await db.setSetting(LEARNED_KEY, mergeLearned(local, sanitizeLearned(settings[LEARNED_KEY])));
+  }
 }
 
 /** Write the merge in one transaction. The device counts as linked to the copy BEFORE the write, because the write triggers a backup. */
@@ -47,6 +61,8 @@ export async function applyMerge(db: PocketDb, merged: Merged): Promise<void> {
   const was = await db.getSetting<boolean>(LINKED_KEY);
   await db.setSetting(LINKED_KEY, true);
   try {
+    // Settings first: the records write triggers a backup, which must already carry them.
+    await applySettings(db, merged.settings);
     await db.putMany(merged.records, merged.wallets);
   } catch (err) {
     await db.setSetting(LINKED_KEY, was === true);

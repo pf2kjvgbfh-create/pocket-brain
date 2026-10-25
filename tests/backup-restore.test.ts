@@ -132,3 +132,58 @@ describe('export', () => {
     expect(parsed.months).toBeUndefined();
   });
 });
+
+describe('stage 2b: settings travel with the copy', () => {
+  const learned = { 'кофе|idea': { to_kind: 'expense', wallet_id: 'gold', updated_utc: '2026-10-22T09:00:00.000Z' } };
+
+  it('last wallet and corrections memory come back after a restore; the token does not travel', async () => {
+    const repo = new FakeRepo(BACKUP.owner, BACKUP.repo);
+    const src = await PocketDb.open(`settings-${(n += 1)}`);
+    await src.setSetting(TOKEN_KEY, FAKE_TOKEN);
+    await src.setSetting('last_wallet_id', 'gold');
+    await src.setSetting('learned', learned);
+    await src.putRecord(rec('a', '2026-10-20T00:00:00Z', { refine: 'pending' }));
+    const ctl = createBackupController({ db: src, fetch: repo.fetch, sleep: async () => undefined });
+    ctl.trigger();
+    await ctl.idle();
+    expect(repo.files.get(BACKUP.mainPath)).not.toContain(FAKE_TOKEN);
+
+    const dst = await PocketDb.open(`settings-${(n += 1)}`);
+    const client = createGithubClient({ token: FAKE_TOKEN, fetch: repo.fetch, sleep: async () => undefined });
+    const remote = await loadRemote(client);
+    await applyMerge(dst, mergeBackup({ records: [], wallets: [] }, remote));
+    expect(await dst.getSetting('last_wallet_id')).toBe('gold');
+    expect(await dst.getSetting('learned')).toEqual(learned);
+    expect(await dst.getSetting(TOKEN_KEY)).toBeUndefined();
+    expect((await dst.listAllRecords())[0].refine).toBe('pending');
+  });
+
+  it('a malformed value is not applied and does not break the restore', async () => {
+    const dst = await PocketDb.open(`settings-${(n += 1)}`);
+    await dst.setSetting('last_wallet_id', 'cash');
+    const merged = mergeBackup({ records: [], wallets: [] }, { records: [rec('a', 'x')], wallets: [], settings: { last_wallet_id: 7, learned: 'junk' } });
+    await applyMerge(dst, merged);
+    expect(await dst.getSetting('last_wallet_id')).toBe('cash');
+    expect(await dst.getSetting('learned')).toBeUndefined();
+    expect(await dst.listAllRecords()).toHaveLength(1);
+  });
+
+  it('corrections memory is merged by entry: the newest entry wins, local-only entries stay', async () => {
+    const dst = await PocketDb.open(`settings-${(n += 1)}`);
+    await dst.setSetting('learned', {
+      'кофе|idea': { to_kind: 'income', updated_utc: '2026-10-25T00:00:00.000Z' },
+      'чай|idea': { to_kind: 'expense', updated_utc: '2026-10-01T00:00:00.000Z' },
+    });
+    const remote = {
+      'кофе|idea': { to_kind: 'expense', updated_utc: '2026-10-22T09:00:00.000Z' }, // older: local stays
+      'чай|idea': { to_kind: 'income', updated_utc: '2026-10-10T00:00:00.000Z' }, // newer: remote wins
+      'сок|idea': { to_kind: 'expense', updated_utc: '2026-10-10T00:00:00.000Z' }, // new
+    };
+    await applyMerge(dst, mergeBackup({ records: [], wallets: [] }, { records: [], wallets: [], settings: { learned: remote } }));
+    expect(await dst.getSetting('learned')).toEqual({
+      'кофе|idea': { to_kind: 'income', updated_utc: '2026-10-25T00:00:00.000Z' },
+      'чай|idea': { to_kind: 'income', updated_utc: '2026-10-10T00:00:00.000Z' },
+      'сок|idea': { to_kind: 'expense', updated_utc: '2026-10-10T00:00:00.000Z' },
+    });
+  });
+});

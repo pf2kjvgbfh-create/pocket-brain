@@ -147,8 +147,8 @@ function walletName(wallets: WalletRow[], id: string): string {
   return wallets.find((w) => w.id === id)?.name ?? '';
 }
 
-/** «Понял так: напоминание, завтра 19:00 МСК» — built from the CURRENT card values, so it follows edits. */
-export function understoodSentence(s: CardState, wallets: WalletRow[], now: Date): string {
+/** «напоминание, завтра 19:00 МСК» — built from the CURRENT card values, so it follows edits. */
+function describeState(s: CardState, wallets: WalletRow[], now: Date): string {
   const amount = parseRubles(s.amount);
   const wallet = walletName(wallets, s.walletId);
   const rate = s.rate.trim() ? `${s.rate.trim()}%` : '';
@@ -187,5 +187,20 @@ export function understoodSentence(s: CardState, wallets: WalletRow[], now: Date
       if (amount !== undefined) head += ` ${formatRub(amount)}`;
       if (wallet) parts.push(wallet);
   }
-  return `Понял так: ${[head, ...parts].join(', ')}`;
+  return [head, ...parts].join(', ');
+}
+
+/** «Понял так: …» (the edit card). */
+export function understoodSentence(s: CardState, wallets: WalletRow[], now: Date): string {
+  return `Понял так: ${describeState(s, wallets, now)}`;
+}
+
+/** «Записал: расход 500,00 ₽, Золотая карта» (the toast after an autosave). */
+export function savedSentence(r: RecordRow, wallets: WalletRow[], now: Date): string {
+  return `Записал: ${describeState(stateFromRecord(r), wallets, now)}`;
+}
+
+/** The same phrase opened again: nothing new was written. */
+export function alreadySentence(r: RecordRow, wallets: WalletRow[], now: Date): string {
+  return `Уже записано: ${describeState(stateFromRecord(r), wallets, now)}`;
 }

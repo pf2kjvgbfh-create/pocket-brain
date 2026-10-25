@@ -1,7 +1,8 @@
 // ALLOWLIST serializer (invariant 3): only the fields named here ever leave the device.
 // A field added to a record later is NOT backed up until it is added to a list below on purpose.
-import { BACKUP_SETTING_KEYS } from '../config';
+import { BACKUP_SETTING_KEYS, LAST_WALLET_KEY, LEARNED_KEY } from '../config';
 import type { RecordFields, RecordRow, WalletRow } from '../db/types';
+import { sanitizeLearned } from '../parser/learned';
 import { KINDS } from '../ui/card-model';
 import { TOKEN_KEY } from './token';
 
@@ -44,6 +45,7 @@ export function serializeRecord(r: RecordRow): RecordRow {
     created_utc: r.created_utc,
     updated_utc: r.updated_utc,
     deleted: r.deleted,
+    ...(r.refine === 'pending' ? { refine: 'pending' as const } : {}),
   };
 }
 
@@ -51,11 +53,23 @@ export function serializeWallet(w: WalletRow): WalletRow {
   return { id: w.id, name: w.name, hidden: w.hidden, start_balance_minor: w.start_balance_minor };
 }
 
-/** Only allowlisted keys; the token key is refused even if it is (wrongly) on the list. */
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const isStr = (v: unknown): v is string => typeof v === 'string';
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+/** A setting value that may travel: undefined when it does not have the right shape. Unknown keys pass as they are. */
+export function sanitizeSetting(key: string, value: unknown): unknown {
+  if (key === LAST_WALLET_KEY) return isStr(value) && value !== '' ? value : undefined;
+  if (key === LEARNED_KEY) return isObj(value) ? sanitizeLearned(value) : undefined;
+  return value;
+}
+
+/** Only allowlisted keys with a valid shape; the token key is refused even if it is (wrongly) on the list. */
 export function pickSettings(settings: Record<string, unknown>, allowed: readonly string[] = BACKUP_SETTING_KEYS): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const k of allowed) {
-    if (k !== TOKEN_KEY && settings[k] !== undefined) out[k] = settings[k];
+    const v = k === TOKEN_KEY ? undefined : sanitizeSetting(k, settings[k]);
+    if (v !== undefined) out[k] = v;
   }
   return out;
 }
@@ -70,11 +84,6 @@ export function buildBackup(src: BackupSource, exportedUtc: string, allowed: rea
     records: src.records.map(serializeRecord),
   };
 }
-
-const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
-const isStr = (v: unknown): v is string => typeof v === 'string';
-
-const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 /** Field values from outside: a value of the wrong type is dropped (it would break the lists or the totals). */
 function sanitizeFields(v: unknown): RecordFields {
@@ -106,6 +115,7 @@ export function sanitizeRecord(v: unknown): RecordRow | null {
     created_utc: v.created_utc,
     updated_utc: v.updated_utc,
     deleted: v.deleted === true,
+    ...(v.refine === 'pending' ? { refine: 'pending' as const } : {}),
   });
 }
 

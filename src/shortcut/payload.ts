@@ -3,9 +3,10 @@
 import { MSK_OFFSET_MIN, SHORTCUT_NAME } from '../config';
 import type { RecordRow } from '../db/types';
 import { subscriptionNextDue } from '../money/totals';
-import { formatMsk } from '../time/format';
+import { formatMsk, mskClock } from '../time/format';
 
 export interface ShortcutPayload {
+  /** «позвонить маме — 19:00 МСК»: the record title plus the Moscow time (the time is also in the reminder name). */
   title: string;
   /** ISO 8601 with a fixed +03:00 offset: «2026-10-23T19:00:00+03:00». */
   due: string;
@@ -42,7 +43,7 @@ export function buildPayload(r: RecordRow, now: Date): ShortcutPayload | null {
   const ms = Date.parse(dueUtc);
   if (Number.isNaN(ms)) return null;
   return {
-    title: r.fields.title || r.raw_text,
+    title: `${r.fields.title || r.raw_text} — ${mskClock(dueUtc)} МСК`,
     due: isoMsk(ms),
     due_local: localText(ms),
     due_msk: formatMsk(dueUtc, { now }).big,

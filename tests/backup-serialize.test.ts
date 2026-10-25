@@ -85,3 +85,40 @@ describe('allowlist serializer', () => {
     expect(ok.fields).toEqual({ title: 'вода', amount_minor: 50000, tags: ['дом', 'вода'] });
   });
 });
+
+describe('stage 2b: refine flag and the settings that travel with the copy', () => {
+  const learned = { 'кофе|idea': { to_kind: 'expense', wallet_id: 'gold', updated_utc: '2026-10-22T09:00:00.000Z' } };
+
+  it('refine survives only as «pending»', () => {
+    expect(serializeRecord(rec('a', { refine: 'pending' })).refine).toBe('pending');
+    expect('refine' in serializeRecord(rec('a'))).toBe(false);
+    expect('refine' in serializeRecord({ ...rec('a'), refine: 'done' } as unknown as RecordRow)).toBe(false);
+    const text = JSON.stringify({
+      format: 'pocket-brain', version: 1, exported_utc: NOW, wallets: [], settings: {},
+      records: [{ ...rec('a'), refine: 'pending' }, { ...rec('b'), refine: 'whatever' }],
+    });
+    const back = parseBackup(text).records;
+    expect(back.find((r) => r.id === 'a')?.refine).toBe('pending');
+    expect(back.find((r) => r.id === 'b')?.refine).toBeUndefined();
+  });
+
+  it('last_wallet_id and learned are allowlisted and round-trip; the token still never goes', () => {
+    const settings = { last_wallet_id: 'gold', learned, github_token: FAKE_TOKEN, backup_hashes: { a: 'b' } };
+    const f = buildBackup({ records: [rec('a')], wallets, settings }, NOW);
+    expect(f.settings).toEqual({ last_wallet_id: 'gold', learned });
+    expect(JSON.stringify(f)).not.toContain(FAKE_TOKEN);
+    expect(parseBackup(JSON.stringify(f)).settings).toEqual({ last_wallet_id: 'gold', learned });
+  });
+
+  it('malformed settings from outside are dropped', () => {
+    const text = (settings: unknown): string =>
+      JSON.stringify({ format: 'pocket-brain', version: 1, exported_utc: NOW, wallets: [], settings, records: [] });
+    expect(parseBackup(text({ last_wallet_id: 5, learned: 'x' })).settings).toEqual({});
+    expect(parseBackup(text({ learned: [1, 2] })).settings).toEqual({});
+    expect(parseBackup(text({ learned: { 'a|idea': 'oops', 'b|idea': { to_kind: 'expense', updated_utc: 3 } } })).settings).toEqual({ learned: {} });
+    expect(parseBackup(text({ learned: { 'a|idea': { to_kind: 'bogus', wallet_id: 'gold', updated_utc: 'x', evil: 1 } } })).settings).toEqual({
+      learned: { 'a|idea': { wallet_id: 'gold', updated_utc: 'x' } },
+    });
+    expect(parseBackup(text({ github_token: FAKE_TOKEN })).settings).toEqual({});
+  });
+});

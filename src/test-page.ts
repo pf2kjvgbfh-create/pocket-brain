@@ -72,7 +72,7 @@ function describeMode(): string {
     (navigator as unknown as { standalone?: boolean }).standalone === true ||
     matchMedia('(display-mode: standalone)').matches;
   const where = standalone ? 'открыто с иконки «Домой»' : 'открыто во вкладке браузера';
-  return `Режим: ${where}. Запусти тест дважды: во вкладке и с иконки «Домой».`;
+  return `Режим: ${where}.`;
 }
 
 document.querySelector('#mode')!.textContent = describeMode();

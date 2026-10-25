@@ -2,6 +2,7 @@
 // SECURITY: only the FAKE token is ever used; api.github.com is never really contacted (every request is mocked).
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { FAKE_TOKEN, FakeRepo } from '../tests/helpers/fake-repo';
+import { captureShortcutClicks } from './helpers';
 
 const OWNER = 'pf2kjvgbfh-create';
 const MAIN = 'data/pocket-brain.json';
@@ -11,6 +12,11 @@ const IDEA = 'что-то непонятное про вторник';
 // A service worker can make Playwright miss requests (WebKit then sends them to the REAL network). Backups do not
 // need the service worker, so it is blocked here; `expectNoLeak` also checks that the mock saw every request.
 test.use({ serviceWorkers: 'block' });
+
+// A saved reminder opens the Shortcut by itself after 5 s: the click is recorded, never really followed.
+test.beforeEach(async ({ page }) => {
+  await captureShortcutClicks(page);
+});
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -85,9 +91,7 @@ async function addTyped(page: Page, phrase: string): Promise<void> {
   if (await again.isVisible()) await again.click();
   await page.locator('#new-text').fill(phrase);
   await page.locator('[data-action="parse"]').click();
-  await expect(page.getByTestId('card')).toBeVisible();
-  await page.locator('[data-action="save"]').click();
-  await expect(page.getByTestId('saved')).toBeVisible();
+  await expect(page.getByTestId('saved')).toBeVisible(); // saved at once: no card, no «Сохранить»
 }
 
 const mainJson = (repo: FakeRepo): { records: { raw_text: string }[]; wallets: unknown[] } =>

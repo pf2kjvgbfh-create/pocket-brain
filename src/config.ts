@@ -55,8 +55,21 @@ export const BACKUP = {
   apiVersion: '2022-11-28',
 } as const;
 
+/** Settings keys of the autosave stage (stored in the `settings` store). */
+export const LAST_WALLET_KEY = 'last_wallet_id';
+export const LEARNED_KEY = 'learned';
+
 /**
  * Settings keys that may be written to a backup or an export. Everything else (above all the token) is left out.
- * Empty for now: no setting is worth restoring yet. Add a key here on purpose, never by accident.
+ * Add a key here on purpose, never by accident; a restored value is validated before it is applied.
  */
-export const BACKUP_SETTING_KEYS: readonly string[] = [];
+export const BACKUP_SETTING_KEYS: readonly string[] = [LAST_WALLET_KEY, LEARNED_KEY];
+
+/** How long the «Записал: …» toast with «Отменить» stays; a reminder opens in «Напоминания» when this passes untouched. */
+export const UNDO_MS = 5000;
+
+/** Short toasts without buttons («Отменено»). */
+export const TOAST_SHORT_MS = 2500;
+
+/** Corrections memory: the most entries kept; the oldest are dropped first. */
+export const LEARNED_MAX = 500;

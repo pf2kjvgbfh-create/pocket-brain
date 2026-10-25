@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SHORTCUT_NAME } from '../src/config';
 import type { RecordRow } from '../src/db/types';
 import { buildPayload, buildShortcutUrl } from '../src/shortcut/payload';
+import { buildAutoRecord } from '../src/ui/autosave';
 
 const NOW = new Date('2026-10-22T09:00:00Z');
 
@@ -30,7 +31,7 @@ describe('buildPayload', () => {
   it('reminder: exactly the five documented fields', () => {
     const p = buildPayload(rec({}), NOW);
     expect(p).toEqual({
-      title: 'позвонить маме',
+      title: 'позвонить маме — 19:00 МСК',
       due: '2026-10-23T19:00:00+03:00',
       due_local: localOracle('2026-10-23T16:00:00Z'),
       due_msk: '23.10 19:00 МСК',
@@ -54,9 +55,29 @@ describe('buildPayload', () => {
     expect(p?.due_msk).toBe('01.01.2027 00:30 МСК');
   });
 
-  it('title falls back to the raw text', () => {
-    expect(buildPayload(rec({ fields: {} }), NOW)?.title).toBe('напомни завтра в 19:00 позвонить маме');
-    expect(buildPayload(rec({ fields: { title: '' } }), NOW)?.title).toBe('напомни завтра в 19:00 позвонить маме');
+  it('title falls back to the raw text; both carry the Moscow time', () => {
+    expect(buildPayload(rec({ fields: {} }), NOW)?.title).toBe('напомни завтра в 19:00 позвонить маме — 19:00 МСК');
+    expect(buildPayload(rec({ fields: { title: '' } }), NOW)?.title).toBe('напомни завтра в 19:00 позвонить маме — 19:00 МСК');
+  });
+
+  it('the Moscow time in the title is the MSK clock, whatever the device zone', () => {
+    expect(buildPayload(rec({ due_utc: '2026-12-31T21:30:00.000Z' }), NOW)?.title).toBe('позвонить маме — 00:30 МСК');
+    expect(buildPayload(rec({ due_utc: '2026-10-23T09:05:00.000Z' }), NOW)?.title).toBe('позвонить маме — 12:05 МСК');
+  });
+
+  it('DST: «5 ноября в 19:00» said on 30.10 -> due +03:00, due_local follows the phone zone (EST after 1 Nov)', () => {
+    const now = new Date('2026-10-30T10:00:00Z');
+    const text = 'напомни 5 ноября в 19:00 позвонить маме';
+    const { record } = buildAutoRecord({
+      draft: { id: 'd1', text, created_utc: now.toISOString() },
+      wallets: [], lastWalletId: null, learned: {}, now,
+    });
+    const p = buildPayload(record, now)!;
+    expect(p.due).toBe('2026-11-05T19:00:00+03:00');
+    expect(p.title).toBe('позвонить маме — 19:00 МСК');
+    expect(p.due_local).toBe(localOracle('2026-11-05T16:00:00Z'));
+    if (process.env.TZ === 'America/New_York') expect(p.due_local).toBe('2026-11-05 11:00');
+    if (process.env.TZ === 'UTC') expect(p.due_local).toBe('2026-11-05 16:00');
   });
 
   it('subscription: next occurrence, repeat monthly', () => {
@@ -67,6 +88,7 @@ describe('buildPayload', () => {
     expect(p?.due).toBe('2026-11-17T12:00:00+03:00');
     expect(p?.repeat).toBe('monthly');
     expect(p?.due_msk).toBe('17.11 12:00 МСК');
+    expect(p?.title).toBe('облако — 12:00 МСК');
     expect(p?.due_local).toBe(localOracle('2026-11-17T09:00:00Z'));
   });
 
@@ -125,7 +147,7 @@ describe('buildShortcutUrl', () => {
     const url = buildShortcutUrl(p);
     const text = url.slice(url.indexOf('&text=') + '&text='.length);
     const back = JSON.parse(decodeURIComponent(text));
-    expect(back.title).toBe(title);
+    expect(back.title).toBe(`${title} — 19:00 МСК`);
     expect(back).toEqual(p);
   });
 });

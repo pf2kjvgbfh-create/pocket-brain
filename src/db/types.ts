@@ -29,6 +29,8 @@ export interface RecordRow {
   created_utc: string;
   updated_utc: string;
   deleted: boolean;
+  /** The rules were unsure; the local model (stage 5) may re-sort this record. Cleared when the owner edits it. */
+  refine?: 'pending';
 }
 
 export interface WalletRow {
