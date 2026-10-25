@@ -16,6 +16,7 @@ Hardware: ONLY a Windows laptop (Ryzen 7 6800H, 16 GB, no NVIDIA) + iPhone 17 Pr
 - NEVER print env values, tokens or keys — names only. Never read or output `.env*`, `*.pem`, `*token*`, `*secret*`, `*.key`. The GitHub token is typed by the owner into the app's Settings only: never in code, URL, backup, export, logs, screenshots or chat. Test only with a fake value.
 - DO NOT FAKE INTEGRATIONS: no access → stub `TODO:INTEGRATION` + a line in STATUS.
 - NO USER DATA IN THE PUBLIC REPO (`pocket-brain`). Data goes only to the private `pocket-brain-data`. Test fixtures use invented names/amounts.
+- NO CONFIRMATION CARDS (owner, 2026-10-24/25): a phrase from `#t=` or typed is saved at once; the owner never picks kind/wallet/date before saving. A toast «Отменить / Изменить» follows; editing stays possible from the lists.
 - RULES FIRST, MODEL NEVER BLOCKS SAVE. ALL TIMES SHOWN IN MSK (+03:00), stored in UTC. `#t=` READ ONCE then `replaceState`, records have ids. Single-thread wllama compat (no COOP/COEP on Pages).
 - Free only: no paid services, no paid API, no analytics, no CDN at runtime. Don't change stack/hosting without a line in `DECISIONS.md` and the owner's consent.
 - Check library APIs (wllama, wllama-compat, chrono-node, Playwright) through context7 before using them; never from memory. Don't invent tools.
