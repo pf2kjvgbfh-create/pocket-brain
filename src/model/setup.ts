@@ -59,7 +59,8 @@ export function setupModel(app: App, flags: ModelFlags = localFlags): ModelSetup
       const { loadEngine } = await import('./engine');
       try {
         return await loadEngine(
-          (loaded, total) => progress(total > 0 ? Math.floor((loaded / total) * 100) : null),
+          // gzip from Pages: `total` is the compressed size, so `loaded` runs past it.
+          (loaded, total) => progress(total > 0 ? Math.min(99, Math.floor((loaded / total) * 100)) : null),
           () => {
             downloaded();
             progress(null);

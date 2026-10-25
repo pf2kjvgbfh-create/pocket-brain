@@ -80,6 +80,13 @@ export const MODEL = {
   firstShard: 'qwen3-0.6b-q4_k_m-00001-of-00004.gguf',
   /** Shown on the Settings button (sum of the 4 shards, decimal MB). */
   sizeMb: 357,
+  /** Exact size of each shard file in bytes (Pages sends them gzip-compressed, see `src/model/cache-fix.ts`). */
+  shardBytes: {
+    'qwen3-0.6b-q4_k_m-00001-of-00004.gguf': 95227424,
+    'qwen3-0.6b-q4_k_m-00002-of-00004.gguf': 88661472,
+    'qwen3-0.6b-q4_k_m-00003-of-00004.gguf': 89457024,
+    'qwen3-0.6b-q4_k_m-00004-of-00004.gguf': 83248640,
+  } as Record<string, number>,
   /** Qwen3: no <think> block. */
   noThinking: true,
   contextTokens: 1024,

@@ -3,6 +3,7 @@
 // (OPFS), so only the first load downloads ~360 MB.
 import { MODEL } from '../config';
 import type { Kind } from '../parser/types';
+import { fixCompressedSizes } from './cache-fix';
 import { buildMessages, readKind, RESPONSE_SCHEMA } from './prompt';
 
 export interface Engine {
@@ -30,9 +31,12 @@ export async function loadEngine(onProgress?: Progress, onDownloaded?: () => voi
   wllama.setCompat({ wasm: compatWasm.default, worker: { code: compatWorker.default } });
   // Two steps instead of loadModelFromUrl: a failed download is only a network problem, while the memory-heavy load
   // is the step iOS may kill the page in (the refiner's `loading` flag covers only that one).
+  // Pages gzip: without this the cached copy never validates and is downloaded again on every start (cache-fix.ts).
+  await fixCompressedSizes(wllama.cacheManager, MODEL.shardBytes);
   const model = await wllama.modelManager.getModelOrDownload({ url: new URL(firstShardUrl(), location.href).href }, {
     progressCallback: ({ loaded, total }: { loaded: number; total: number }) => onProgress?.(loaded, total),
   });
+  await fixCompressedSizes(wllama.cacheManager, MODEL.shardBytes);
   onDownloaded?.();
   await wllama.loadModel(model, { n_threads: 1, n_gpu_layers: 0, n_ctx: MODEL.contextTokens });
   return {

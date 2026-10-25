@@ -86,12 +86,13 @@ test('the real model: loads from our site, saving stays instant, an unsure note 
   test.skip(!process.env.MODEL_E2E || info.project.name !== 'chromium', 'MODEL_E2E=1, Chromium only');
   test.setTimeout(600_000);
   const requested: string[] = [];
+  const modelGets: string[] = [];
   page.on('request', (r) => {
     if (/^https?:/.test(r.url())) requested.push(r.url());
+    if (r.url().includes('/model/') && r.method() === 'GET') modelGets.push(r.url());
   });
   await page.goto('./');
   const site = new URL(page.url()).origin;
-  const modelFetches = (): number => requested.filter((u) => u.includes('/model/')).length;
   const note = (name: string, value: number): void => {
     info.annotations.push({ type: name, description: String(Math.round(value)) });
     console.log(`${name}: ${Math.round(value)}`);
@@ -130,14 +131,16 @@ test('the real model: loads from our site, saving stays instant, an unsure note 
   await check();
 
   // From the cache: reload (the model is not in memory any more), one unsure note, time until it is processed.
-  const fetchedBefore = modelFetches();
+  const gotBefore = modelGets.length;
   await page.reload();
   const t1 = Date.now();
   await type(page, 'мастеру за ремонт часов 2700');
   expect(await pending(page)).toBe(1);
   await expect.poll(() => pending(page), { timeout: 120_000, intervals: [250] }).toBe(0);
   note('reload, load from cache + 1 note, ms', Date.now() - t1);
-  note('model file requests after the reload', modelFetches() - fetchedBefore);
+  // Downloaded once: after a reload the model comes from the cache, not a byte again (live Pages sends it gzip-compressed,
+  // which used to make wllama throw the cached copy away on every start, see src/model/cache-fix.ts).
+  expect(modelGets.slice(gotBefore)).toEqual([]);
   // Offline (the phone in the metro): the page comes from the service worker, the model from its own cache.
   await page.context().setOffline(true);
   await page.reload();

@@ -45,7 +45,7 @@ Updated: stage 5 (local model, «Умный разбор»).
 
 ## Scripts
 - `scripts/build-sw.mjs`, `sw-lib.mjs`, `sw.template.js`: service worker generation after `vite build`.
-- `scripts/deploy.mjs`: build and push to the `gh-pages` branch (fetches the live site first; files > 5 MB that are new go one per push through the temporary branch `deploy-upload`, then the orphan commit).
+- `scripts/deploy.mjs`: build and push to the `gh-pages` branch (partial fetch of the live site: file list + small files; files > 5 MB that are new go one per push through the temporary branch `deploy-upload`, then the orphan commit). Model shards are never pushed from the laptop (HTTP 408): they must already be on the site byte for byte, else it stops. They get there from the release `model-qwen3-0.6b-q4km-v1` via `.github/workflows/model-to-pages.yml` (`gh workflow run model-to-pages.yml`).
 - `scripts/test-tz.mjs`: the time zone test runner.
 - `scripts/check-build.mjs` (`pnpm check:build`, run after `pnpm build`): fails if the shipped app files contain `github_pat`/`ghp_`-style tokens or a URL host other than `api.github.com` (and `www.w3.org` XML namespaces). Hosts inside the wllama chunk only (`WLLAMA_HOSTS`: library fallbacks and comments, never contacted).
 

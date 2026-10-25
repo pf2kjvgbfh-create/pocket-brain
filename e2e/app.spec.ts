@@ -182,7 +182,10 @@ test('the same link twice gives one record', async ({ page }) => {
 });
 
 test('a draft left by a killed page is saved after a reload, without opening «Напоминания»', async ({ page }) => {
-  await page.goto('./');
+  await page.goto('./'); // creates the database
+  await expect(page.locator('#new-text')).toBeVisible();
+  // Write the draft from the test page (same site, no app running), or the app page itself could pick it up first.
+  await page.goto('./test/');
   await page.evaluate(
     () =>
       new Promise<void>((resolve, reject) => {
@@ -200,7 +203,7 @@ test('a draft left by a killed page is saved after a reload, without opening «�
         };
       }),
   );
-  await page.reload();
+  await page.goto('./');
   await expect(toast(page)).toContainText('Записал: напоминание');
   await tab(page, 'Дела');
   await expect(page.locator('#screen-todo .row')).toHaveCount(1);
