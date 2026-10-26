@@ -93,8 +93,22 @@ export function findAmounts(lower: string): FoundAmount[] {
   }));
 }
 
-/** The money amount: the first number with a currency word, otherwise the first number. */
+// «2 пиццы»: a number with a noun right after it (not a preposition) counts things; «за 1200» later is the price.
+const COUNTED_RE = /^\s+(?!(?:за|на|в|во|с|со|из|по|и|а|от|до|у)(?![\p{L}\d]))\p{L}/u;
+const PRICE_BEFORE_RE = /(?<![\p{L}\d])за\s+$/u;
+
+/**
+ * The money amount: the first number with a currency word, otherwise «за N» after a counted «2 пиццы», otherwise
+ * the first number.
+ */
 export function findAmount(lower: string): FoundAmount | null {
   const all = findAmounts(lower);
-  return all.find((a) => a.hasCurrency) ?? all[0] ?? null;
+  const withCurrency = all.find((a) => a.hasCurrency);
+  if (withCurrency) return withCurrency;
+  const [first] = all;
+  if (first && COUNTED_RE.test(lower.slice(first.end))) {
+    const price = all.find((a) => a !== first && PRICE_BEFORE_RE.test(lower.slice(0, a.start)));
+    if (price) return price;
+  }
+  return first ?? null;
 }
