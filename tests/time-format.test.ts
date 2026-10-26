@@ -53,4 +53,15 @@ describe('MSK helpers', () => {
     expect(fromMskInput('')).toBeUndefined();
     expect(toMskInput(null)).toBe('');
   });
+
+  it('a hand-typed time (a browser without the date picker shows a text box) is read too; nonsense is refused', () => {
+    expect(fromMskInput('2026-10-23 19:00')).toBe('2026-10-23T16:00:00.000Z');
+    expect(fromMskInput('23.10.2026 19:00')).toBe('2026-10-23T16:00:00.000Z');
+    expect(fromMskInput('23.10.2026, 9:05')).toBe('2026-10-23T06:05:00.000Z');
+    expect(fromMskInput('2026-10-23T19:00:00')).toBe('2026-10-23T16:00:00.000Z');
+    expect(fromMskInput('завтра')).toBeUndefined();
+    expect(fromMskInput('2026-13-01T10:00')).toBeUndefined();
+    expect(fromMskInput('31.02.2026 10:00')).toBeUndefined();
+    expect(fromMskInput('23.10.2026 25:00')).toBeUndefined();
+  });
 });

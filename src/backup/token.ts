@@ -11,8 +11,8 @@ export type TokenCheck = { ok: true; token: string } | { ok: false; reason: stri
 
 export function checkToken(raw: string): TokenCheck {
   const token = raw.trim();
-  if (!token) return { ok: false, reason: 'Вставь токен в поле' };
-  if (!TOKEN_SHAPE.test(token)) return { ok: false, reason: 'В токене лишние символы. Скопируй его на GitHub заново целиком' };
+  if (!token) return { ok: false, reason: 'Вставь ключ в поле' };
+  if (!TOKEN_SHAPE.test(token)) return { ok: false, reason: 'В ключе лишние символы. Скопируй его на GitHub заново целиком' };
   return { ok: true, token };
 }
 

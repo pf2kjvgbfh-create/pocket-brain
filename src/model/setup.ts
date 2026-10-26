@@ -3,7 +3,7 @@
 import { LAST_WALLET_KEY, TOAST_SHORT_MS, UNDO_MS } from '../config';
 import type { RecordRow } from '../db/types';
 import type { App } from '../ui/app';
-import { savedSentence } from '../ui/card-model';
+import { recordSentence } from '../ui/saved-text';
 import { renderModelPanel } from '../ui/model-panel';
 import { hasToast, showToast } from '../ui/toast';
 import { createRefiner, type ModelFlags, type Refiner } from './refiner';
@@ -73,10 +73,10 @@ export function setupModel(app: App, flags: ModelFlags = localFlags): ModelSetup
     flags,
     onRefined: (before, after) => {
       void app.refresh();
-      // Never replace a «Записал: …» toast: that would cancel its «Отменить» and the reminder that opens by itself.
+      // Never replace a «Записал: …» toast: that would cancel its «Отменить».
       if (hasToast()) return;
       showToast({
-        text: savedSentence(after, app.wallets, app.now()).replace(/^Записал/, 'Уточнил'),
+        text: `Уточнил. ${recordSentence(after, app.wallets, { now: app.now() })}`,
         ms: UNDO_MS,
         actions: [{ label: 'Отменить', action: 'refine-undo', run: () => void undo(before, after) }],
       });

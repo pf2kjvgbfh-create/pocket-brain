@@ -99,7 +99,7 @@ describe('backup controller (fake GitHub)', () => {
     const { db, repo, ctl } = await setup('github_pat_WRONG_FAKE');
     await db.putRecord(rec('a'));
     await ctl.idle();
-    expect(ctl.getStatus().error).toBe('токен не подходит или истёк');
+    expect(ctl.getStatus().error).toBe('ключ доступа не подходит или истёк');
     expect(repo.log).toHaveLength(1);
     expect((await db.listRecords()).map((r) => r.id)).toEqual(['a']);
   });
@@ -125,7 +125,7 @@ describe('backup controller (fake GitHub)', () => {
     await db.putRecord(rec('a'));
     await ctl.idle();
     expect(repo.log).toHaveLength(0);
-    expect(ctl.getStatus().error).toBe('токен не введён');
+    expect(ctl.getStatus().error).toBe('ключ доступа не введён');
   });
 
   it('a hanging backup never delays or blocks the save', async () => {

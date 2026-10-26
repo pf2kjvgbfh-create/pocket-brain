@@ -2,7 +2,7 @@ import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { captureShortcutClicks, reloadWithLink, shortcutClicks, waitPastUndo, type ShortcutClick } from './helpers';
 
 // A saved reminder opens the Shortcut «Мозг-напомнить» BY ITSELF when the toast's undo window passes
-// (<a data-action="remind-auto"> click). The test never opens the scheme: captureShortcutClicks (a test-side click
+// (<a data-action="remind-auto"> click); a subscription never does (only its button). The test never opens the scheme: captureShortcutClicks (a test-side click
 // listener) cancels the default action and records each click. Production code has no hook.
 
 const PREFIX =
@@ -39,7 +39,10 @@ const shot = (page: Page, info: TestInfo, name: string): Promise<Buffer> =>
 async function tapRemind(page: Page, scope = ''): Promise<ShortcutClick> {
   const link = page.locator(`${scope} [data-action="remind"]`.trim());
   await expect(link).toBeVisible();
-  await expect(page.locator(`${scope} .remind .hint`.trim())).toHaveText('Откроется Команда «Мозг-напомнить» — если iPhone спросит, нажми «Открыть»');
+  await expect(page.locator(`${scope} .remind .hint`.trim())).toHaveText(
+    'Если iPhone спросит «Открыть?» — нажми «Открыть». Не открылось? Нужна Команда «Мозг-напомнить» — как сделать',
+  );
+  await expect(page.locator(`${scope} .remind [data-action="shortcut-help"]`.trim())).toBeVisible();
   const before = page.url();
   const count = (await shortcutClicks(page)).length;
   await link.click();
@@ -57,7 +60,7 @@ test.beforeEach(async ({ page }) => {
 
 test('reminder: after the undo window the Shortcut opens by itself with the right payload (MSK time in the title)', async ({ page }, info) => {
   await page.goto(`./#t=${REMINDER}`);
-  await expect(toast(page)).toContainText('Записал: напоминание');
+  await expect(toast(page)).toContainText('Напомню: позвонить маме');
   expect(await shortcutClicks(page)).toEqual([]); // not before the toast ends
   await shot(page, info, 'reminder');
 
@@ -72,6 +75,9 @@ test('reminder: after the undo window the Shortcut opens by itself with the righ
   expect(payload.repeat).toBe('none');
   expect(Object.keys(payload).sort()).toEqual(['due', 'due_local', 'due_msk', 'repeat', 'title']);
   await expect(toast(page)).toHaveCount(0);
+  // After the try the countdown is gone and the «Не открылось? … как сделать» help is back.
+  await expect(page.getByTestId('countdown')).toBeHidden();
+  await expect(page.locator('[data-testid="saved"] [data-action="shortcut-help"]')).toBeVisible();
   // Only one automatic open, not repeated.
   await page.waitForTimeout(1500);
   expect((await shortcutClicks(page)).length).toBe(1);
@@ -98,7 +104,7 @@ test('«Изменить» cancels the automatic open; the button in the sheet s
 
 test('a newer phrase inside the window cancels the first automatic open', async ({ page }) => {
   await page.goto(`./#t=${REMINDER}`);
-  await expect(toast(page)).toContainText('Записал: напоминание');
+  await expect(toast(page)).toContainText('Напомню: позвонить маме');
   await page.goto(`./#t=${OTHER}`); // same page, new hash: a second phrase
   await expect.poll(async () => (await shortcutClicks(page)).length, { timeout: AUTO_TIMEOUT }).toBeGreaterThan(0);
   await waitPastUndo(page);
@@ -111,7 +117,7 @@ test('a reload with the link after the automatic open: «Уже записано
   await page.goto(`./#t=${REMINDER}`);
   await expect.poll(async () => (await shortcutClicks(page)).length, { timeout: AUTO_TIMEOUT }).toBe(1);
   await reloadWithLink(page, REMINDER); // the click log starts empty again on the reloaded page
-  await expect(toast(page)).toContainText('Уже записано: напоминание');
+  await expect(toast(page)).toContainText('Уже записано');
   await waitPastUndo(page);
   expect((await shortcutClicks(page)).length).toBe(0);
   await page.getByRole('tab', { name: 'Дела' }).click();
@@ -128,10 +134,14 @@ test('after the page is left alone the reminder stays in «Дела» with the b
   expect(decode(click).title).toBe('позвонить маме — 19:00 МСК');
 });
 
-test('subscription: monthly, next occurrence with +03:00', async ({ page }) => {
+test('subscription: never opens by itself; its button «о платеже» gives monthly, next occurrence with +03:00', async ({ page }) => {
   await page.goto(`./#t=${SUBSCRIPTION}`);
-  await expect.poll(async () => (await shortcutClicks(page)).length, { timeout: AUTO_TIMEOUT }).toBe(1);
-  const payload = decode((await shortcutClicks(page))[0]);
+  await expect(toast(page)).toContainText('Подписка: ');
+  await expect(page.getByTestId('countdown')).toBeHidden(); // no «Ставлю напоминание через …» for a subscription
+  await waitPastUndo(page);
+  expect(await shortcutClicks(page)).toEqual([]);
+  await expect(page.locator('[data-testid="saved"] [data-action="remind"]')).toHaveText('Поставить напоминание о платеже');
+  const payload = decode(await tapRemind(page, '[data-testid="saved"]'));
   expect(payload.repeat).toBe('monthly');
   expect(payload.due).toMatch(/^\d{4}-\d{2}-17T12:00:00\+03:00$/);
   expect(Date.parse(payload.due)).toBeGreaterThan(Date.now());

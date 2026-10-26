@@ -20,6 +20,13 @@
     { "text": "отдал долг Сергею 700", "expected": { "kind": "repay", "who": "Сергей", "amount_minor": 70000, "direction": "by_me" } },
     { "text": "Даша вернула мне долг 1200", "expected": { "kind": "repay", "who": "Даша", "amount_minor": 120000, "direction": "to_me" } },
     { "text": "отдала Тане её деньги 3000", "expected": { "kind": "repay", "who": "Таня", "amount_minor": 300000, "direction": "by_me" } },
+    { "text": "вернул ивану 2000", "expected": { "kind": "repay", "who": "Иван", "amount_minor": 200000, "direction": "by_me" } },
+    { "text": "вернула маше 1500", "expected": { "kind": "repay", "who": "Маша", "amount_minor": 150000, "direction": "by_me" } },
+    { "text": "отдал сергею 700", "expected": { "kind": "repay", "who": "Сергей", "amount_minor": 70000, "direction": "by_me" } },
+    { "text": "Отдал Пете 1200", "expected": { "kind": "repay", "who": "Петя", "amount_minor": 120000, "direction": "by_me" } },
+    { "text": "вернул книгу 300", "expected": { "kind": "income", "amount_minor": 30000 } },
+    { "text": "вернул сдачу 200", "expected": { "kind": "income", "amount_minor": 20000 } },
+    { "text": "отдал все 2000", "expected": { "kind": "expense", "amount_minor": 200000 } },
 
     { "text": "двадцать пять тысяч за аренду", "expected": { "kind": "expense", "amount_minor": 2500000, "title": "аренду" } },
     { "text": "пять тысяч бензин", "expected": { "kind": "expense", "amount_minor": 500000, "title": "бензин" } },
@@ -32,6 +39,13 @@
     { "text": "полторы тысячи стрижка", "expected": { "kind": "expense", "amount_minor": 150000, "title": "стрижка" } },
     { "text": "2,5к продукты", "expected": { "kind": "expense", "amount_minor": 250000, "title": "продукты" } },
     { "text": "три тысячи пятьсот за свет", "expected": { "kind": "expense", "amount_minor": 350000, "title": "свет" } },
+    { "text": "500 такси", "expected": { "kind": "expense", "amount_minor": 50000, "title": "такси" } },
+    { "text": "300 кофе", "expected": { "kind": "expense", "amount_minor": 30000, "title": "кофе" } },
+    { "text": "80 хлеб", "expected": { "kind": "expense", "amount_minor": 8000, "title": "хлеб" } },
+    { "text": "3 яблока", "expected": { "kind": "idea" } },
+    { "text": "50 отжиманий", "expected": { "kind": "idea" } },
+    { "text": "100 приседаний утром", "expected": { "kind": "idea" } },
+    { "text": "2 литра воды", "expected": { "kind": "idea" } },
 
     { "text": "купил кофе за 300 и круассан за 250", "expected": [
       { "kind": "expense", "amount_minor": 30000, "title": "кофе" },

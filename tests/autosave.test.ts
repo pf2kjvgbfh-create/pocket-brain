@@ -60,9 +60,9 @@ describe('buildAutoRecord', () => {
 
   it('a learned kind and wallet apply to a bare phrase', () => {
     const learned: Learned = { 'кофе|idea': { to_kind: 'expense', wallet_id: 'gold', updated_utc: NOW.toISOString() } };
-    const { record } = build('250 кофе', { lastWalletId: 'cash', learned });
+    const { record } = build('кофе 250 вкусный', { lastWalletId: 'cash', learned });
     expect(record).toMatchObject({ kind: 'expense', wallet_id: 'gold' });
-    expect(record.fields).toMatchObject({ amount_minor: 25000, title: 'кофе' });
+    expect(record.fields).toMatchObject({ amount_minor: 25000, title: 'кофе вкусный' });
     expect(record.refine).toBeUndefined();
   });
 

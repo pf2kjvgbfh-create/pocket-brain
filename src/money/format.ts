@@ -35,3 +35,9 @@ export function minorToInput(minor: number | undefined): string {
   const kop = minor % 100;
   return kop === 0 ? String(rub) : `${rub},${String(kop).padStart(2, '0')}`;
 }
+
+/** For short sentences (the toast): «1 250 ₽», «89,50 ₽», «100 $» — «,00» is dropped for whole amounts. */
+export function formatMoneyShort(minor: number, currency?: 'USD' | 'EUR'): string {
+  const full = formatMoney(minor, currency);
+  return Math.round(minor) % 100 === 0 ? full.replace(/,00(?=\s)/u, '') : full;
+}

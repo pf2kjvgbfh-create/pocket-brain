@@ -72,7 +72,7 @@ textarea {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.tabbar button[aria-selected="true"] { color: var(--accent); border-top-color: var(--accent); font-weight: 600; }
+.tabbar button[aria-selected="true"] { color: var(--accent); border-top-color: var(--accent); } /* bold cut «Настройки» to «Настрой…» at 375 px */
 
 /* ---- stage 2: forms, card, lists ---- */
 h2 { font-size: 20px; margin: 0; }
@@ -109,12 +109,12 @@ input, select {
 .sentence { font-size: 24px; font-weight: 600; margin: 8px 0; overflow-wrap: anywhere; }
 .raw { color: var(--muted); font-size: 16px; margin: 4px 0 12px; overflow-wrap: anywhere; }
 .row-field { display: block; margin: 0 0 12px; }
-.row-field .lbl { display: block; color: var(--muted); font-size: 15px; margin: 0 0 4px; }
+.row-field .lbl { display: block; color: var(--muted); font-size: 16px; margin: 0 0 4px; }
 .when { margin: -4px 0 12px; }
 .time { display: inline-flex; flex-direction: column; }
 .t-big { font-weight: 600; }
-.t-small { color: var(--muted); font-size: 14px; }
-.hint.small { font-size: 14px; margin: 6px 0 0; }
+.t-small { color: var(--muted); font-size: 16px; }
+.hint.small { font-size: 16px; margin: 6px 0 0; }
 .remind { margin: 16px 0 0; }
 .remind .btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 .hint.empty { margin: 12px 0; }
@@ -137,7 +137,7 @@ input, select {
 }
 .row-main { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
 .row-title, .row-sub { overflow-wrap: anywhere; }
-.row-sub { color: var(--muted); font-size: 15px; }
+.row-sub { color: var(--muted); font-size: 16px; }
 .row-side { display: flex; flex-direction: column; align-items: flex-end; flex: 0 1 auto; text-align: right; font-size: 16px; max-width: 50%; }
 .row-side .amount { font-weight: 600; white-space: nowrap; }
 
@@ -150,7 +150,7 @@ input, select {
   min-width: 0; padding: 12px; font: inherit; text-align: left;
   color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 14px;
 }
-.wallet-name { color: var(--muted); font-size: 15px; overflow-wrap: anywhere; }
+.wallet-name { color: var(--muted); font-size: 16px; overflow-wrap: anywhere; }
 .balance { font-size: 20px; font-weight: 700; overflow-wrap: anywhere; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .chip { min-height: 40px; padding: 6px 14px; font: inherit; font-size: 16px; color: var(--fg); background: var(--field); border: 1px solid var(--line); border-radius: 20px; }
@@ -195,3 +195,42 @@ body.sheet-open { overflow: hidden; }
   border: 1px solid currentColor;
   border-radius: 10px;
 }
+
+/* ---- stage 7 part B: readable hints, «Последняя запись», countdown, «Дела» done, money people, settings steps ---- */
+/* The browser's grey placeholder is ~2:1 on our fields; --muted is 5.4:1 (light) and 6.6:1 (dark). */
+::placeholder { color: var(--muted); opacity: 1; }
+.btn.small { min-height: 44px; padding: 6px 14px; font-size: 16px; }
+a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.link { padding: 12px 2px; margin: -12px 0; color: var(--accent); text-decoration: underline; white-space: nowrap; }
+.last { margin: 0 0 18px; padding: 12px 14px; background: var(--field); border: 1px solid var(--line); border-radius: 14px; }
+.last-head { font-size: 16px; font-weight: 600; color: var(--muted); }
+.last-text { display: block; margin: 6px 0 0; font-size: 19px; font-weight: 600; overflow-wrap: anywhere; }
+.last .actions { margin-top: 10px; }
+.last-list { list-style: none; margin: 6px 0 0; padding: 0; }
+.last-list li { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.last-list .last-text { flex: 1 1 auto; min-width: 0; margin: 0; font-size: 17px; }
+.last .remind { margin-top: 12px; }
+.countdown { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 10px 0 0; font-size: 18px; font-weight: 600; color: var(--accent); }
+.steps { margin: 8px 0 12px; padding-left: 26px; font-size: 17px; }
+.steps li { margin: 6px 0; overflow-wrap: anywhere; }
+.rows li.todo { display: flex; align-items: flex-start; gap: 6px; }
+.rows li.todo .row { flex: 1 1 auto; min-width: 0; }
+.done-box { display: flex; flex: 0 0 44px; align-items: center; justify-content: center; min-height: 56px; }
+.done-box input { width: 26px; height: 26px; margin: 0; padding: 0; accent-color: var(--accent); }
+.done-block summary { display: flex; align-items: center; min-height: 48px; font-size: 18px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.done-block .row-title { color: var(--muted); text-decoration: line-through; }
+.block > h2 { margin: 0 0 4px; }
+.debt-totals { margin: 8px 0; }
+.debt-totals p { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 4px 0; font-size: 16px; color: var(--muted); }
+.debt-totals .total { font-size: 20px; }
+.plus { color: var(--ok); }
+.minus { color: var(--bad); }
+.person { margin: 14px 0 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; }
+.person-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; }
+.person-head h3 { margin: 0; font-size: 20px; overflow-wrap: anywhere; }
+.person-head .net { font-size: 17px; font-weight: 700; }
+.person .rows li:last-child { border-bottom: 0; }
+.backup h2 { margin-top: 24px; }
+.backup [data-testid="no-backup"] { font-size: 18px; font-weight: 600; }
+.backup-status { font-size: 17px; margin: 6px 0 0; }
+.rows li.todo-plain { padding-left: 50px; } /* a subscription in «Дела»: no tick box, the text lines up with the others */

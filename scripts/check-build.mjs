@@ -11,6 +11,13 @@ const ALLOWED_HOSTS = new Map([
   ['www.w3.org', 'XML namespace strings (e.g. http://www.w3.org/2000/svg); never fetched'],
 ]);
 
+// Exact URLs (not whole hosts) that may appear: a plain link the owner taps, the app never sends anything there.
+// Only this prefix followed by `?` or the end of the URL passes; any other github.com address still fails.
+const ALLOWED_URL_PREFIXES = [
+  ['https://github.com/settings/personal-access-tokens/new', 'Settings → «Ключ доступа»: GitHub page for a new key (DECISIONS stage 7)'],
+];
+const isAllowedUrl = (url) => ALLOWED_URL_PREFIXES.some(([p]) => url === p || url.startsWith(`${p}?`));
+
 // Hosts that appear only inside the wllama library chunk (stage 5) and are never contacted; e2e/model.spec.ts checks
 // at runtime that loading and running the model requests nothing outside our own site.
 const WLLAMA_HOSTS = new Map([
@@ -52,6 +59,7 @@ while (queue.length > 0) {
 
 const problems = [];
 const seenHosts = new Map();
+const allowedUrls = new Map();
 let scanned = 0;
 
 for (const rel of [...reach].sort()) {
@@ -61,7 +69,11 @@ for (const rel of [...reach].sort()) {
   for (const re of SECRET_PATTERNS) {
     if (re.test(text)) problems.push(`${rel}: matches secret pattern ${re}`);
   }
-  for (const m of text.matchAll(/https?:\/\/([A-Za-z0-9.-]+)/g)) {
+  for (const m of text.matchAll(/https?:\/\/([A-Za-z0-9.-]+)[^\s"'`\\<>)]*/g)) {
+    if (isAllowedUrl(m[0])) {
+      allowedUrls.set(m[0], (allowedUrls.get(m[0]) ?? new Set()).add(rel));
+      continue;
+    }
     const host = m[1].toLowerCase();
     seenHosts.set(host, (seenHosts.get(host) ?? new Set()).add(rel));
     if (!ALLOWED_HOSTS.has(host) && !(WLLAMA_HOSTS.has(host) && isWllamaChunk(text))) problems.push(`${rel}: external host ${host}`);
@@ -69,6 +81,7 @@ for (const rel of [...reach].sort()) {
 }
 
 console.log(`check:build scanned ${scanned} text files reachable from the app (skipped dist/test/, the test page's chunks and .wasm)`);
+for (const [url, files] of allowedUrls) console.log(`  link ${url}: allowed exact link (${[...files].join(', ')})`);
 for (const [host, files] of seenHosts) {
   const status = ALLOWED_HOSTS.has(host) ? 'allowed' : WLLAMA_HOSTS.has(host) ? 'wllama chunk only' : 'NOT ALLOWED';
   console.log(`  host ${host}: ${status} (${[...files].join(', ')})`);

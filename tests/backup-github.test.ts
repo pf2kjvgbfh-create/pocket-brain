@@ -106,7 +106,7 @@ describe('putFile', () => {
     const { client } = make(repo, { token: 'github_pat_WRONG_FAKE' });
     const err = await fail(client.putFile('p', 'x', 'm'));
     expect(err.kind).toBe('auth');
-    expect(messageFor(err.kind)).toBe('токен не подходит или истёк');
+    expect(messageFor(err.kind)).toBe('ключ доступа не подходит или истёк');
     expect(repo.log).toHaveLength(1);
   });
 

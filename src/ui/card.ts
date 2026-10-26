@@ -73,6 +73,7 @@ export function renderCard(opts: CardOptions): HTMLElement {
   };
 
   const whenLine = h('div', { class: 'when' });
+  const dueError = h('p', { class: 'error', role: 'alert', 'data-testid': 'due-error' });
   const refreshWhen = (): void => {
     whenLine.replaceChildren(timeEl(fromMskInput(state.due) ?? null, opts.now()));
   };
@@ -92,12 +93,20 @@ export function renderCard(opts: CardOptions): HTMLElement {
       case 'toWallet':
         return walletSelect(state, 'toWalletId', wallets, changed);
       case 'due': {
-        const input = h('input', { type: 'datetime-local', 'data-field': 'due' });
+        // The date picker on iPhone; a browser without it shows a text box, so a typed «27.10.2026 19:00» works too.
+        // A time that cannot be read never wipes the saved one: it is kept and a hint says how to write it.
+        const input = h('input', { type: 'datetime-local', 'data-field': 'due', placeholder: 'ДД.ММ.ГГГГ ЧЧ:ММ' });
         input.value = state.due;
-        input.addEventListener('input', () => {
-          state.due = input.value;
+        const apply = (): void => {
+          const v = input.value.trim();
+          const ok = v === '' || fromMskInput(v) !== undefined;
+          if (ok) state.due = v;
+          dueError.textContent = ok ? '' : 'Не понял время. Напиши так: 27.10.2026 19:00';
           changed();
-        });
+        };
+        // `change` too: a native picker may report only when «Готово» is tapped.
+        input.addEventListener('input', apply);
+        input.addEventListener('change', apply);
         return input;
       }
       case 'who':
@@ -131,7 +140,7 @@ export function renderCard(opts: CardOptions): HTMLElement {
       fieldsBox.append(row(LABELS[name], control(name)));
       if (name === 'due') {
         refreshWhen();
-        fieldsBox.append(whenLine);
+        fieldsBox.append(dueError, whenLine);
       }
     }
   };

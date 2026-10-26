@@ -57,7 +57,7 @@ test('off by default: Settings says so, saving works, no model file is requested
   await type(page, 'репетитор по английскому 2000 за урок');
   await tab(page, 'Настройки');
   const panel = page.getByTestId('model');
-  await expect(panel.getByRole('heading')).toHaveText('Умный разбор');
+  await expect(panel.getByRole('heading')).toHaveText('Умный помощник (необязательно)');
   await expect(panel.getByTestId('model-state')).toHaveText('Выключен. Всё и так записывается по правилам.');
   await expect(panel.locator('[data-action="model-toggle"]')).toHaveText('Скачать и включить (357 МБ)');
   await page.waitForTimeout(1000);

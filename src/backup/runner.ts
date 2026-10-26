@@ -58,7 +58,7 @@ export function createBackupController(opts: ControllerOptions): BackupControlle
   async function run(): Promise<void> {
     const token = await readToken(db);
     if (!token) {
-      set({ error: 'токен не введён' });
+      set({ error: 'ключ доступа не введён' });
       return;
     }
     set({ running: true });

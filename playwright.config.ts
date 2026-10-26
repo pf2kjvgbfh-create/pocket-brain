@@ -16,6 +16,12 @@ export default defineConfig({
     { name: 'webkit', use: { ...devices['Desktop Safari'], viewport: phone } },
     { name: 'chromium-1280', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } },
     { name: 'webkit-1280', use: { ...devices['Desktop Safari'], viewport: { width: 1280, height: 800 } } },
+    // The owner's phone as close as the laptop gets: WebKit, an iPhone (touch, mobile Safari UA), 375 px, a device in New York
+    // (so every «у тебя …» local-time line shows), Russian locale. Stage 7 UX walk-through: e2e/ux.spec.ts.
+    {
+      name: 'iphone-ny',
+      use: { ...devices['iPhone 17 Pro Max'], viewport: phone, timezoneId: 'America/New_York', locale: 'ru-RU' },
+    },
   ],
   webServer: live
     ? undefined

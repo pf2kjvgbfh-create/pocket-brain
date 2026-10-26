@@ -5,6 +5,7 @@ import type { RecordRow } from '../db/types';
 import { editRecord, type App } from './app';
 import { DIRECTIONS } from './card-model';
 import { h, timeEl } from './dom';
+import { mskDate } from './saved-text';
 
 const walletName = (app: App, id: string | null | undefined): string => app.wallets.find((w) => w.id === id)?.name ?? '';
 
@@ -12,8 +13,8 @@ export function rowTitle(r: RecordRow): string {
   return r.fields.title || r.raw_text;
 }
 
-/** Second line: what is useful besides the title. */
-function subLine(app: App, r: RecordRow): string {
+/** Second line: what is useful besides the title (as parts; the first part of a debt / return is what happened). */
+function subParts(app: App, r: RecordRow): string[] {
   const f = r.fields;
   const parts: string[] = [];
   switch (r.kind) {
@@ -36,10 +37,13 @@ function subLine(app: App, r: RecordRow): string {
     case 'transfer':
       parts.push(`${walletName(app, r.wallet_id) || '?'} → ${walletName(app, f.to_wallet_id) || '?'}`);
       break;
-    case 'subscription':
-      if (f.day) parts.push(`${f.day}-го числа`);
+    case 'subscription': {
+      // The next payment as a plain date: the hour of a monthly payment means nothing to the owner.
+      const next = subscriptionNextDue(f, r.due_utc, app.now());
+      parts.push(next ? `платёж ${mskDate(next, { now: app.now() })}` : f.day ? `${f.day}-го числа` : '');
       if (r.wallet_id) parts.push(walletName(app, r.wallet_id));
       break;
+    }
     case 'idea':
       if (f.tags?.length) parts.push(f.tags.map((t) => `#${t}`).join(' '));
       break;
@@ -47,19 +51,26 @@ function subLine(app: App, r: RecordRow): string {
       if (r.wallet_id) parts.push(walletName(app, r.wallet_id));
   }
   if (f.currency) parts.push('в рублях не считается');
-  return parts.filter(Boolean).join(' · ');
+  return parts.filter(Boolean);
 }
 
-export function recordRow(app: App, r: RecordRow, opts: { showTime?: 'due' | 'created' | 'none' } = {}): HTMLElement {
+export interface RowOptions {
+  showTime?: 'due' | 'created' | 'none';
+  /** Inside a person's block in «Деньги»: the name is already the heading, so the row says what happened. */
+  inPerson?: boolean;
+}
+
+export function recordRow(app: App, r: RecordRow, opts: RowOptions = {}): HTMLElement {
   const mode = opts.showTime ?? 'none';
   const byPerson = r.kind === 'held' || r.kind === 'debt' || r.kind === 'repay';
-  const title = byPerson && r.fields.who ? r.fields.who : rowTitle(r);
-  const sub = subLine(app, r);
+  const parts = subParts(app, r);
+  let title = byPerson && r.fields.who ? r.fields.who : rowTitle(r);
+  if (opts.inPerson && byPerson) title = r.kind === 'held' ? 'Храню его деньги' : (parts.shift() ?? title);
+  const sub = parts.join(' · ');
   const side: HTMLElement[] = [];
   if (r.fields.amount_minor !== undefined) side.push(h('span', { class: 'amount' }, formatMoney(r.fields.amount_minor, r.fields.currency)));
   if (mode === 'due') {
-    const due = r.kind === 'subscription' ? subscriptionNextDue(r.fields, r.due_utc, app.now()) : r.due_utc;
-    side.push(timeEl(due, app.now()));
+    if (r.kind !== 'subscription') side.push(timeEl(r.due_utc, app.now())); // a subscription has «платёж DD.MM» below
   } else if (mode === 'created') side.push(timeEl(recordWhen(r), app.now())); // «вчера потратил»: the day it happened
   const btn = h(
     'button',
@@ -71,7 +82,7 @@ export function recordRow(app: App, r: RecordRow, opts: { showTime?: 'due' | 'cr
   return h('li', {}, btn);
 }
 
-export function listOf(app: App, rows: RecordRow[], opts: Parameters<typeof recordRow>[2], empty: string): HTMLElement {
+export function listOf(app: App, rows: RecordRow[], opts: RowOptions, empty: string): HTMLElement {
   if (rows.length === 0) return h('p', { class: 'hint empty' }, empty);
   return h('ul', { class: 'rows' }, ...rows.map((r) => recordRow(app, r, opts)));
 }

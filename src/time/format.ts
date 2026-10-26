@@ -72,11 +72,18 @@ export function toMskInput(utcIso: string | null): string {
   return `${p.y}-${pad(p.mo)}-${pad(p.d)}T${clock(p)}`;
 }
 
-/** «2026-10-23T19:00» typed as MSK -> ISO UTC; undefined when empty or invalid. */
+/**
+ * «2026-10-23T19:00» (the date picker) typed as MSK -> ISO UTC; undefined when empty or invalid. A browser without the
+ * picker shows a plain text box, so «2026-10-23 19:00» and «23.10.2026 19:00» are read too; an impossible date is refused.
+ */
 export function fromMskInput(value: string): string | undefined {
-  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value.trim());
-  if (!m) return undefined;
-  const [y, mo, d, h, mi] = m.slice(1).map(Number);
-  const ms = Date.UTC(y, mo - 1, d, h, mi) - MSK_OFFSET_MIN * 60_000;
-  return Number.isNaN(ms) ? undefined : new Date(ms).toISOString();
+  const v = value.trim();
+  const iso = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{1,2}):(\d{2})/.exec(v);
+  const ru = /^(\d{1,2})\.(\d{1,2})\.(\d{4}),?\s+(\d{1,2}):(\d{2})$/.exec(v);
+  const parts = iso ? iso.slice(1).map(Number) : ru ? [ru[3], ru[2], ru[1], ru[4], ru[5]].map(Number) : null;
+  if (!parts) return undefined;
+  const [y, mo, d, h, mi] = parts;
+  const t = new Date(Date.UTC(y, mo - 1, d, h, mi));
+  if (h > 23 || mi > 59 || t.getUTCMonth() !== mo - 1 || t.getUTCDate() !== d) return undefined;
+  return new Date(t.getTime() - MSK_OFFSET_MIN * 60_000).toISOString();
 }

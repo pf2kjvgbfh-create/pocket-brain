@@ -54,18 +54,22 @@ export const expenseShortRule: Rule = (ctx) => {
 };
 
 /** Words right after the amount that make it a count, not money («30 книг», «2 раза», «5 минут»). */
-const UNIT_RE = /^\s*(?:минут|секунд|час|дн|день|недел|месяц|год|лет|раз|км|кг|гр|штук|шт|страниц|книг|человек|процент|%)/u;
+const UNIT_RE =
+  /^\s*(?:минут|секунд|час|дн|день|недел|месяц|год|лет|раз|км|кг|гр|штук|шт|страниц|книг|человек|процент|%|метр|литр|шаг|круг|отжиман|приседан|подтягиван|повтор|подход|калори|балл|очк|стакан|чашк|бутыл|яиц|яйц)/u;
 
 /** «30 книг», «2 раза»: the number counts something, it is not money. */
 export const isCount = (lower: string, amount: Span): boolean => UNIT_RE.test(lower.slice(amount.end));
 
-/** A leading number below this (kopecks) is more often a count («3 яблока», «300 кофе» stays a thought, as before). */
-const LEAD_MIN_MINOR = 100_000;
+/**
+ * A leading number below this (kopecks) is more often a count («3 яблока», «30 книг»); from 50 ₽ on, «500 такси» /
+ * «300 кофе» are expenses (spec: a bare amount + a noun). Counts above it are caught by `isCount` («50 отжиманий»).
+ */
+const LEAD_MIN_MINOR = 5_000;
 // chrono misses «к пятнице»; any day word means a plan, not a purchase.
 const DAY_WORD_RE = word('понедельник\\p{L}*|вторник\\p{L}*|сред[аеуы]|четверг\\p{L}*|пятниц\\p{L}*|суббот\\p{L}*|воскресень\\p{L}*|завтра|сегодня|послезавтра');
 
 /**
- * «25000 за аренду», «5000 бензин», «5к такси»: the phrase starts with the amount (1000 ₽ and more), then 1–3 words,
+ * «25000 за аренду», «5000 бензин», «5к такси»: the phrase starts with the amount (50 ₽ and more), then 1–3 words,
  * and names no day («5000 к пятнице» is not a purchase).
  */
 export const expenseLeadRule: Rule = (ctx) => {

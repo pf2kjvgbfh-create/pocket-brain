@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatRub, parseRubles } from '../src/money/format';
+import { formatMoneyShort, formatRub, parseRubles } from '../src/money/format';
 
 describe('formatRub', () => {
   it('formats kopecks as «1 234,50 ₽» with fixed non-breaking separators', () => {
@@ -11,6 +11,15 @@ describe('formatRub', () => {
   });
   it('shows a minus for negatives', () => {
     expect(formatRub(-123450)).toBe('-1 234,50 ₽');
+  });
+});
+
+describe('formatMoneyShort', () => {
+  it('drops «,00» for whole rubles, keeps kopecks and the currency sign', () => {
+    expect(formatMoneyShort(125000)).toBe('1 250 ₽');
+    expect(formatMoneyShort(8950)).toBe('89,50 ₽');
+    expect(formatMoneyShort(10000, 'USD')).toBe('100 $');
+    expect(formatMoneyShort(2050, 'EUR')).toBe('20,50 €');
   });
 });
 

@@ -40,6 +40,32 @@ export function looksLikePerson(word: string | undefined): boolean {
   return /^\p{Lu}/u.test(word) || RELATIONS.test(fold(word));
 }
 
+/**
+ * Male names whose dative ends in -у / -ю («Ивану», «Сергею»). Only these: «вернул книгу», «вернул сдачу» look the same
+ * and are not people, so a lower-case -у word is a person only when it is a known name.
+ */
+const MALE_DATIVE = new RegExp(
+  '^(?:' +
+    'иван|петр|серге|андре|алексе|дмитри|михаил|никола|владимир|павл|артем|максим|евгени|игор|олег|роман|антон|' +
+    'денис|юри|виктор|вадим|кирилл|егор|глеб|тимур|руслан|влад|степан|борис|григори|федор|константин|леонид|' +
+    'геннади|валери|анатоли|арсени|марк|матве|ярослав|станислав|вячеслав|эдуард|аркади|семен|яков|льв|тимофе|' +
+    'георги|васили|данил|даниил|филипп|захар|богдан|альберт|ростислав|всеволод|савели|прохор|арсен|рустам' +
+    ')[ую]$',
+  'u',
+);
+/** Words ending like a female dative (-е, -ии) that are not people («отдал все 2000», «вернул свои»). */
+const NOT_DATIVE = new Set(['все', 'свои', 'мои', 'твои', 'наши', 'ваши', 'эти', 'те', 'обе', 'сдаче', 'обратно', 'тоже', 'уже', 'еще', 'позже', 'раньше']);
+
+/**
+ * A name in the dative written in any case («ивану», «маше», «Сергею», «марии»): a known male name in -у/-ю, or a word
+ * of 3+ letters ending in consonant + е or in -ии (female names and diminutives: «Пете», «Оле», «Марии»).
+ */
+export function looksLikeDativeName(word: string): boolean {
+  const w = fold(word);
+  if (!/^\p{L}{3,}$/u.test(w) || NOT_A_NAME.has(w) || NOT_DATIVE.has(w)) return false;
+  return MALE_DATIVE.test(w) || /[бвгджзклмнпрстфхцчшщ]е$/u.test(w) || /ии$/u.test(w);
+}
+
 /** The person as stored: dictionary form, capitalised. */
 export function personName(word: string, nameCase: NameCase): string {
   return capitalize(nominative(word, nameCase));

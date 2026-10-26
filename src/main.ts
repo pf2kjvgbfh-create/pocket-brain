@@ -7,7 +7,7 @@ import type { App } from './ui/app';
 import { extractHashText, installHashListeners } from './ui/intake';
 import { renderIdeas, renderTodo } from './ui/lists';
 import { renderMoney } from './ui/money-screen';
-import { createNewScreen } from './ui/new-screen';
+import { createNewScreen, type NewScreen } from './ui/new-screen';
 import { renderSettings } from './ui/settings-screen';
 
 const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.tabbar button'));
@@ -45,12 +45,14 @@ async function boot(): Promise<void> {
       renderTodo(app, screen('todo'));
       renderMoney(app, screen('money'));
       renderIdeas(app, screen('ideas'));
+      newScreen?.sync();
       // After every save or change: records the rules were unsure about go to the local model in the background
       // (only when the owner turned it on; never awaited, so it never holds up saving).
       void model?.refiner.run();
     },
   };
   let model: ModelSetup | undefined;
+  let newScreen: NewScreen | undefined;
   await app.refresh();
   model = setupModel(app);
   void model.refiner.run();
@@ -60,10 +62,11 @@ async function boot(): Promise<void> {
   window.addEventListener('online', () => backup.trigger());
   if (navigator.onLine) backup.trigger();
   renderSettings(screen('settings'), app, backup, model.panel);
-  const newScreen = createNewScreen(app, screen('new'));
+  newScreen = createNewScreen(app, screen('new'));
+  const screenNew = newScreen;
   const hasLink = extractHashText(window.location.hash) !== null;
-  installHashListeners((text, repeat) => void newScreen.openText(text, true, repeat));
-  if (!hasLink) await newScreen.restoreDraft();
+  installHashListeners((text, repeat) => void screenNew.openText(text, true, repeat));
+  if (!hasLink) await screenNew.restoreDraft();
 }
 
 void boot();

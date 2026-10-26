@@ -60,6 +60,15 @@ export const BACKUP = {
   apiVersion: '2022-11-28',
 } as const;
 
+/**
+ * GitHub's page «new access key», pre-filled (name, owner, one year, write access to files). A plain link the owner
+ * taps in Settings; the app never sends anything there (check:build allows only this exact prefix, DECISIONS stage 7).
+ */
+export const TOKEN_PAGE_PREFIX = 'https://github.com/settings/personal-access-tokens/new';
+export const TOKEN_PAGE_URL =
+  `${TOKEN_PAGE_PREFIX}?name=pocket-brain&description=${encodeURIComponent(`Backup for ${BACKUP.repo}`)}` +
+  `&target_name=${encodeURIComponent(BACKUP.owner)}&expires_in=366&contents=write`;
+
 /** Settings keys of the autosave stage (stored in the `settings` store). */
 export const LAST_WALLET_KEY = 'last_wallet_id';
 export const LEARNED_KEY = 'learned';

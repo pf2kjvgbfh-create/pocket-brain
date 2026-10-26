@@ -5,7 +5,7 @@ import { BACKUP } from '../config';
 export type BackupErrorKind = 'auth' | 'offline' | 'timeout' | 'conflict' | 'not_found' | 'server';
 
 const MESSAGES: Record<BackupErrorKind, string> = {
-  auth: 'токен не подходит или истёк',
+  auth: 'ключ доступа не подходит или истёк',
   offline: 'нет интернета',
   timeout: 'GitHub не отвечает',
   conflict: 'копия изменилась в другом месте, попробую позже',

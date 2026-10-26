@@ -20,8 +20,10 @@ export const MIGRATIONS: Migration[] = [
       wallets.put(row);
     }
   },
-  // v2 (stage 7): the «Вклад» wallet goes away — deleted when no record uses it and its start balance is 0, otherwise
-  // kept (it just no longer matches speech, see walletRefs). A «last wallet» pointing to it is reset either way.
+  // v2 (stage 7): (1) deposits saved before v2 never moved money, but from v2 on a deposit takes its amount out of its
+  // wallet — so every existing deposit loses its wallet, and no old balance changes. (2) Then the «Вклад» wallet goes
+  // away — deleted when no record uses it any more and its start balance is 0, otherwise kept (it just no longer
+  // matches speech, see walletRefs). A «last wallet» pointing to it is reset either way.
   (_db, tx) => {
     const id = OLD_DEPOSIT_WALLET_ID;
     const settings = tx.objectStore('settings');
@@ -29,13 +31,20 @@ export const MIGRATIONS: Migration[] = [
     last.onsuccess = () => {
       if ((last.result as { value?: unknown } | undefined)?.value === id) settings.delete(LAST_WALLET_KEY);
     };
-    const wallet = tx.objectStore('wallets').get(id);
-    wallet.onsuccess = () => {
-      const row = wallet.result as WalletRow | undefined;
-      if (!row || row.start_balance_minor !== 0) return;
-      const all = tx.objectStore('records').getAll();
-      all.onsuccess = () => {
-        const used = (all.result as RecordRow[]).some((r) => r.wallet_id === id || r.fields?.to_wallet_id === id);
+    const records = tx.objectStore('records');
+    const all = records.getAll();
+    all.onsuccess = () => {
+      const rows = (all.result as RecordRow[]).map((r) => {
+        if (r.kind !== 'deposit' || r.wallet_id === null) return r;
+        const row = { ...r, wallet_id: null };
+        records.put(row);
+        return row;
+      });
+      const wallet = tx.objectStore('wallets').get(id);
+      wallet.onsuccess = () => {
+        const row = wallet.result as WalletRow | undefined;
+        if (!row || row.start_balance_minor !== 0) return;
+        const used = rows.some((r) => r.wallet_id === id || r.fields?.to_wallet_id === id);
         if (!used) tx.objectStore('wallets').delete(id);
       };
     };

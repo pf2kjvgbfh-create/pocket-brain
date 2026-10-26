@@ -1,4 +1,4 @@
-// «Настройки» → блок «Умный разбор»: the local model on/off (OFF by default: Safari cannot tell Wi-Fi from mobile data,
+// «Настройки» → блок «Умный помощник (необязательно)»: the local model on/off (OFF by default: Safari cannot tell Wi-Fi from mobile data,
 // so the ~360 MB download only starts when the owner taps the button).
 import { MODEL } from '../config';
 import type { Refiner, ModelFlags } from '../model/refiner';
@@ -72,7 +72,7 @@ export function renderModelPanel({ refiner, flags, subscribeProgress }: ModelPan
   return h(
     'section',
     { class: 'backup', 'data-testid': 'model' },
-    h('h2', {}, 'Умный разбор'),
+    h('h2', {}, 'Умный помощник (необязательно)'),
     h('p', { class: 'hint' }, `Помогает с короткими фразами, которые правила не поняли. Скачивается один раз, ${MODEL.sizeMb} МБ — лучше по Wi-Fi.`),
     state,
     button,

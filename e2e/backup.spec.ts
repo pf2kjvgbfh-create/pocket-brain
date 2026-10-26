@@ -81,17 +81,17 @@ async function setToken(page: Page, token: string): Promise<void> {
   await expect(input).toHaveAttribute('autocomplete', 'off');
   await input.fill(token);
   await page.locator('[data-action="token-save"]').click();
-  await expect(page.getByTestId('token-msg')).toHaveText('токен сохранён');
+  await expect(page.getByTestId('token-state')).toHaveText('Ключ сохранён'); // said once (stage 7, A14)
+  await expect(page.getByTestId('token-msg')).toHaveText('');
   await expect(input).toHaveValue(''); // the value is never echoed
 }
 
 async function addTyped(page: Page, phrase: string): Promise<void> {
   await tab(page, 'Новое');
-  const again = page.locator('[data-action="again"]');
-  if (await again.isVisible()) await again.click();
   await page.locator('#new-text').fill(phrase);
   await page.locator('[data-action="parse"]').click();
-  await expect(page.getByTestId('saved')).toBeVisible(); // saved at once: no card, no «Сохранить»
+  await expect(page.locator('#new-text')).toHaveValue(''); // saved at once: no card, no «Сохранить»
+  await expect(page.getByTestId('saved')).toBeVisible();
 }
 
 const mainJson = (repo: FakeRepo): { records: { raw_text: string }[]; wallets: unknown[] } =>
@@ -123,14 +123,15 @@ test('token -> save a record -> «последняя копия»; the repo has 
   await addTyped(page, REMINDER);
   await expect.poll(() => mainJson(repo).records.map((r) => r.raw_text)).toContain(REMINDER);
   await tab(page, 'Настройки');
-  await expect(status(page)).toContainText('последняя копия');
+  await expect(status(page)).toContainText('Последняя копия');
   await expect(status(page)).toContainText('МСК');
   expect(mainJson(repo).wallets.length).toBeGreaterThan(0);
   for (const text of repo.files.values()) {
     expect(text).not.toContain(FAKE_TOKEN);
     expect(text).not.toContain('github_pat');
   }
-  await expect(page.getByTestId('token-state')).toHaveText('Токен: сохранён');
+  await expect(page.getByTestId('token-state')).toHaveText('Ключ сохранён');
+  await expect(page.getByTestId('no-backup')).toBeHidden();
   await shot(page, info, 'settings');
   expectNoLeak(log, seen);
 });
@@ -150,11 +151,11 @@ test('409 on the first PUT -> retried with a fresh sha -> success', async ({ pag
   const seq = repo.log.map((l) => l.method).join(',');
   expect(seq).toContain('GET,PUT,GET,PUT'); // 409, then a fresh sha, then the retry
   await tab(page, 'Настройки');
-  await expect(status(page)).toContainText('последняя копия');
+  await expect(status(page)).toContainText('Последняя копия');
   expectNoLeak(log, seen);
 });
 
-test('401 -> «токен не подходит или истёк», the record is still saved and visible', async ({ page }) => {
+test('401 -> «ключ доступа не подходит или истёк», the record is still saved; «Удалить ключ» clears that old error', async ({ page }) => {
   const repo = new FakeRepo(OWNER, 'pocket-brain-data', 'github_pat_SOMETHING_ELSE_FAKE');
   const seen = await mockGithub(page, repo);
   const log = watchConsole(page);
@@ -162,13 +163,17 @@ test('401 -> «токен не подходит или истёк», the record 
   await setToken(page, FAKE_TOKEN);
   await addTyped(page, REMINDER);
   await tab(page, 'Настройки');
-  await expect(status(page)).toHaveText('копии нет: токен не подходит или истёк');
+  await expect(status(page)).toHaveText('Не получилось сделать копию: ключ доступа не подходит или истёк');
+  await expect(page.getByTestId('no-backup')).toHaveText('Копии нет — записи только на этом телефоне');
+  await page.locator('[data-action="token-clear"]').click();
+  await expect(page.getByTestId('token-state')).toHaveText('Ключа нет');
+  await expect(status(page)).toHaveText('Копия не делается: нужен ключ доступа — шаги ниже.');
   await tab(page, 'Дела');
-  await expect(page.getByText('позвонить маме').first()).toBeVisible();
+  await expect(page.locator('#screen-todo').getByText('позвонить маме').first()).toBeVisible();
   expectNoLeak(log, seen);
 });
 
-test('offline -> saving works, status «копии нет: нет интернета»', async ({ page, context }) => {
+test('offline -> saving works, status «нет интернета»', async ({ page, context }) => {
   const repo = new FakeRepo(OWNER, 'pocket-brain-data');
   const seen = await mockGithub(page, repo);
   const log = watchConsole(page);
@@ -178,9 +183,9 @@ test('offline -> saving works, status «копии нет: нет интерне
   await context.setOffline(true);
   await addTyped(page, REMINDER);
   await tab(page, 'Настройки');
-  await expect(status(page)).toHaveText('копии нет: нет интернета');
+  await expect(status(page)).toHaveText('Не получилось сделать копию: нет интернета');
   await tab(page, 'Дела');
-  await expect(page.getByText('позвонить маме').first()).toBeVisible();
+  await expect(page.locator('#screen-todo').getByText('позвонить маме').first()).toBeVisible();
   expectNoLeak(log, seen);
   await context.setOffline(false);
 });
@@ -290,18 +295,17 @@ test('export (share path): navigator.share gets one JSON file without the token'
   expect(shared![0].text).not.toContain(FAKE_TOKEN);
 });
 
-test('«Удалить токен»: no more backups, status says so', async ({ page }) => {
+test('«Удалить ключ»: no more backups, status says so', async ({ page }) => {
   const repo = new FakeRepo(OWNER, 'pocket-brain-data');
   await mockGithub(page, repo);
   await page.goto('./');
   await setToken(page, FAKE_TOKEN);
   await expect.poll(() => repo.files.has(MAIN)).toBe(true);
   await page.locator('[data-action="token-clear"]').click();
-  await expect(page.getByTestId('token-msg')).toHaveText('токен удалён');
-  await expect(page.getByTestId('token-state')).toHaveText('Токена нет');
+  await expect(page.getByTestId('token-state')).toHaveText('Ключа нет');
   repo.log.length = 0;
   await addTyped(page, IDEA);
   await tab(page, 'Настройки');
-  await expect(status(page)).toHaveText('копии нет: токен не введён');
+  await expect(status(page)).toHaveText('Копия не делается: нужен ключ доступа — шаги ниже.');
   expect(repo.log).toHaveLength(0);
 });

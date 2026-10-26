@@ -1,4 +1,5 @@
-// «Деньги»: wallet balances, «Долги и чужие деньги» (one line per person), deposits, subscriptions, recent operations.
+// «Деньги»: wallet balances, recent operations (right after the wallets, stage 7 B3), «Долги и чужие деньги» (one
+// line per person), deposits, subscriptions. A tap on any row opens the editor.
 import { RECENT_OPERATIONS } from '../config';
 import { formatRub } from '../money/format';
 import { computeTotals, recordWhen, type PersonDebt, type Totals } from '../money/totals';
@@ -30,6 +31,9 @@ function walletCard(app: App, w: WalletRow, balance: number): HTMLElement {
 
 const byNewest = (a: RecordRow, b: RecordRow): number => (recordWhen(a) < recordWhen(b) ? 1 : -1);
 
+/** How many «Последние операции» are shown; «Показать ещё» adds RECENT_OPERATIONS (kept until the page is reloaded). */
+let opsShown = RECENT_OPERATIONS;
+
 function netText(net: number): string {
   if (net > 0) return `должен мне ${formatRub(net)}`;
   if (net < 0) return `я должен / храню ${formatRub(-net)}`;
@@ -40,8 +44,13 @@ function personBlock(app: App, p: PersonDebt): HTMLElement {
   return h(
     'div',
     { class: 'person', 'data-person': p.key },
-    h('div', { class: 'block-head' }, h('h3', {}, p.who), h('span', { class: 'total', 'data-net': String(p.net) }, netText(p.net))),
-    listOf(app, [...p.items].sort(byNewest), { showTime: 'created' }, ''),
+    h(
+      'div',
+      { class: 'person-head' },
+      h('h3', {}, p.who),
+      h('span', { class: `net ${p.net > 0 ? 'plus' : p.net < 0 ? 'minus' : ''}`, 'data-net': String(p.net) }, netText(p.net)),
+    ),
+    listOf(app, [...p.items].sort(byNewest), { showTime: 'created', inPerson: true }, ''),
   );
 }
 
@@ -54,12 +63,10 @@ function debtsSection(app: App, debts: Totals['debts']): HTMLElement {
     { class: 'block', 'data-section': 'debts' },
     h('div', { class: 'block-head' }, h('h2', {}, 'Долги и чужие деньги')),
     h(
-      'p',
-      { class: 'hint' },
-      'Мне должны ',
-      h('span', { class: 'total', 'data-total': 'owed-to-me' }, formatRub(debts.owedToMe)),
-      ' · Я должен / храню ',
-      h('span', { class: 'total', 'data-total': 'i-owe' }, formatRub(debts.iOwe)),
+      'div',
+      { class: 'debt-totals' },
+      h('p', {}, h('span', { class: 'lbl' }, 'Мне должны'), h('span', { class: 'total plus', 'data-total': 'owed-to-me' }, formatRub(debts.owedToMe))),
+      h('p', {}, h('span', { class: 'lbl' }, 'Я должен / храню'), h('span', { class: 'total minus', 'data-total': 'i-owe' }, formatRub(debts.iOwe))),
     ),
     ...(people.length ? people.map((p) => personBlock(app, p)) : [h('p', { class: 'hint empty' }, 'Пока нет.')]),
   );
@@ -98,8 +105,16 @@ export function renderMoney(app: App, root: HTMLElement): void {
     'subscriptions',
     listOf(app, [...totals.subscriptions.items].sort(byNewest), { showTime: 'due' }, 'Пока нет.'),
   );
-  const ops = app.records.filter(isOperation).sort(byNewest).slice(0, RECENT_OPERATIONS);
-  const recent = section('Последние операции', null, 'operations', listOf(app, ops, { showTime: 'created' }, 'Пока нет.'));
+  const allOps = app.records.filter(isOperation).sort(byNewest);
+  const recent = section('Последние операции', null, 'operations', listOf(app, allOps.slice(0, opsShown), { showTime: 'created' }, 'Пока нет.'));
+  if (allOps.length > opsShown) {
+    const more = h('button', { type: 'button', class: 'btn', 'data-action': 'ops-more' }, `Показать ещё (${allOps.length - opsShown})`);
+    more.addEventListener('click', () => {
+      opsShown += RECENT_OPERATIONS;
+      renderMoney(app, root);
+    });
+    recent.append(more);
+  }
 
-  root.replaceChildren(h('h1', {}, 'Деньги'), wallets, ...(hiddenBlock ? [hiddenBlock] : []), debts, deposits, subs, recent);
+  root.replaceChildren(h('h1', {}, 'Деньги'), wallets, ...(hiddenBlock ? [hiddenBlock] : []), recent, debts, deposits, subs);
 }

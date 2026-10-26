@@ -38,10 +38,10 @@ test.beforeEach(async ({ page }) => {
 /** Typed route: «Новое» -> text -> «Записать» -> saved at once (no card, no «Сохранить»). */
 async function addTyped(page: Page, phrase: string): Promise<void> {
   await tab(page, 'Новое');
-  const again = page.locator('[data-action="again"]');
-  if (await again.isVisible()) await again.click();
   await page.locator('#new-text').fill(phrase);
   await page.locator('[data-action="parse"]').click();
+  // Saved = the box is empty again and «Последняя запись» shows (it stays on the screen until the next phrase).
+  await expect(page.locator('#new-text')).toHaveValue('');
   await expect(saved(page)).toBeVisible();
 }
 
@@ -63,7 +63,8 @@ function tomorrowDdMm(): RegExp {
 
 test('link -> saved at once with a toast, no tap; hash removed; a reload with the link gives no second record, a new open does', async ({ page }, info) => {
   await openLink(page, REMINDER);
-  await expect(toast(page)).toContainText('Записал: напоминание, завтра 19:00 МСК');
+  await expect(toast(page)).toContainText('Напомню: позвонить маме — ');
+  await expect(toast(page)).toContainText(tomorrowDdMm());
   await expect(toast(page).locator('[data-action="undo"]')).toHaveText('Отменить');
   await expect(toast(page).locator('[data-action="edit"]')).toHaveText('Изменить');
   await expect(saved(page)).toBeVisible();
@@ -92,7 +93,7 @@ test('link -> saved at once with a toast, no tap; hash removed; a reload with th
   // The SAME opening coming back (a reload while the link is still in the address): nothing new is written,
   // the toast says so and offers only «Изменить» (DECISIONS stage 7, item 11).
   await reloadWithLink(page, REMINDER);
-  await expect(toast(page)).toContainText('Уже записано: напоминание');
+  await expect(toast(page)).toContainText('Уже записано, второй раз не сохраняю. Напомню: позвонить маме');
   await expect(toast(page).locator('[data-action="edit"]')).toBeVisible();
   await expect(toast(page).locator('[data-action="undo"]')).toHaveCount(0);
   await expect.poll(() => page.url()).not.toContain('#t=');
@@ -104,14 +105,14 @@ test('link -> saved at once with a toast, no tap; hash removed; a reload with th
 
   // A NEW opening of the same link is a new dictation: a second record.
   await openLink(page, REMINDER);
-  await expect(toast(page)).toContainText('Записал: напоминание');
+  await expect(toast(page)).toContainText('Напомню: позвонить маме');
   await tab(page, 'Дела');
   await expect(rows).toHaveCount(2);
 });
 
 test('«Отменить»: the record is gone, the text is back in the box, nothing opens by itself', async ({ page }) => {
   await openLink(page, 'купил воду за 500');
-  await expect(toast(page)).toContainText('Записал: расход 500,00 ₽, Наличные');
+  await expect(toast(page)).toContainText(/^Записал: .+ — 500\s₽, Наличные/);
   await tab(page, 'Деньги');
   await expect(page.locator('#screen-money [data-section="operations"] .row')).toHaveCount(1);
   await tab(page, 'Новое');
@@ -148,12 +149,12 @@ test('«Отменить» also forgets the wallet the phrase named: the next ph
   await toast(page).locator('[data-action="undo"]').click();
   await expect(toast(page)).toContainText('Отменено');
   await openLink(page, 'купил хлеб за 100');
-  await expect(toast(page)).toContainText('Записал: расход 100,00 ₽, Наличные');
+  await expect(toast(page)).toContainText(/^Записал: .+ — 100\s₽, Наличные/);
 });
 
 test('a reminder deleted before the undo window ends does not open by itself', async ({ page }) => {
   await openLink(page, REMINDER);
-  await expect(toast(page)).toContainText('Записал: напоминание');
+  await expect(toast(page)).toContainText('Напомню: позвонить маме');
   await tab(page, 'Дела');
   await page.locator('#screen-todo .row').first().click();
   await page.locator('.sheet [data-action="delete"]').click();
@@ -174,7 +175,7 @@ test('«Изменить» opens the edit sheet of the saved record', async ({ p
   await sheet.locator('[data-field="amount"]').fill('777');
   await sheet.locator('[data-action="save"]').click();
   await expect(sheet).toHaveCount(0);
-  await expect(saved(page)).toContainText('777,00 ₽');
+  await expect(saved(page)).toContainText(/777\s₽/);
   await tab(page, 'Деньги');
   await expect.poll(() => text(page.locator('[data-wallet-id="gold"] .balance'))).toBe(rub(-77700));
 });
@@ -223,7 +224,7 @@ test('a draft left by a killed page is saved after a reload, without opening «�
       }),
   );
   await page.goto('./');
-  await expect(toast(page)).toContainText('Записал: напоминание');
+  await expect(toast(page)).toContainText('Напомню: позвонить маме');
   await tab(page, 'Дела');
   await expect(page.locator('#screen-todo .row')).toHaveCount(1);
   await waitPastUndo(page);
@@ -235,7 +236,7 @@ test('a draft left by a killed page is saved after a reload, without opening «�
 
 test('expense lowers the wallet balance by the amount', async ({ page }, info) => {
   await openLink(page, EXPENSE);
-  await expect(toast(page)).toContainText('Записал: расход 500,00 ₽, Золотая карта');
+  await expect(toast(page)).toContainText(/^Записал: .+ — 500\s₽, Золотая карта/);
   await tab(page, 'Деньги');
   const gold = page.locator('[data-wallet-id="gold"] .balance');
   await expect.poll(() => text(gold)).toBe(rub(-50000));
@@ -246,11 +247,11 @@ test('expense lowers the wallet balance by the amount', async ({ page }, info) =
 
 test('no wallet in the phrase: the last used wallet; the first ever default is cash', async ({ page }) => {
   await openLink(page, 'купил хлеб за 100');
-  await expect(toast(page)).toContainText('Записал: расход 100,00 ₽, Наличные');
+  await expect(toast(page)).toContainText(/^Записал: .+ — 100\s₽, Наличные/);
   await addTyped(page, 'купил воду за 500 золотая карта');
   await expect(toast(page)).toContainText('Золотая карта');
   await addTyped(page, 'купил сок за 200');
-  await expect(toast(page)).toContainText('Записал: расход 200,00 ₽, Золотая карта');
+  await expect(toast(page)).toContainText(/^Записал: .+ — 200\s₽, Золотая карта/);
   await page.reload();
   await addTyped(page, 'купил чай за 50'); // the last wallet survives a reload
   await expect(toast(page)).toContainText('Золотая карта');
@@ -261,8 +262,9 @@ test('no wallet in the phrase: the last used wallet; the first ever default is c
 
 test('corrections memory: an edited wallet is applied to the next similar phrase (not the last wallet)', async ({ page }) => {
   await page.goto('./');
-  await addTyped(page, '300 кофе');
-  await expect(toast(page)).toContainText('Записал: мысль');
+  // «кофе 300 вкусный» stays a thought (an amount AFTER a word is not read as a price); the edit makes it a purchase.
+  await addTyped(page, 'кофе 300 вкусный');
+  await expect(toast(page)).toContainText('Не понял — записал в мысли');
   await toast(page).locator('[data-action="edit"]').click();
   const sheet = page.locator('.sheet');
   await sheet.locator('[data-field="kind"]').selectOption('expense');
@@ -272,14 +274,14 @@ test('corrections memory: an edited wallet is applied to the next similar phrase
   await expect(sheet).toHaveCount(0);
   // Another wallet becomes the last one; the learned wallet must still win for «кофе».
   await addTyped(page, 'купил воду за 500 серебряная карта');
-  await addTyped(page, '250 кофе');
-  await expect(toast(page)).toContainText('Записал: расход 250,00 ₽, Золотая карта');
+  await addTyped(page, 'кофе 250 вкусный');
+  await expect(toast(page)).toContainText(/^Записал: .+ — 250\s₽, Золотая карта/);
   await tab(page, 'Деньги');
   await expect.poll(() => text(page.locator('[data-wallet-id="gold"] .balance'))).toBe(rub(-55000));
   await expect.poll(() => text(page.locator('[data-wallet-id="silver"] .balance'))).toBe(rub(-50000));
   await page.reload(); // the memory is stored, not kept in the page
-  await addTyped(page, '100 кофе');
-  await expect(toast(page)).toContainText('Записал: расход 100,00 ₽, Золотая карта');
+  await addTyped(page, 'кофе 100 вкусный');
+  await expect(toast(page)).toContainText(/^Записал: .+ — 100\s₽, Золотая карта/);
 });
 
 test('«Долги и чужие деньги»: kept money is «я должен / храню», it grows with each held phrase', async ({ page }) => {
@@ -288,7 +290,7 @@ test('«Долги и чужие деньги»: kept money is «я должен
   const total = page.locator('[data-total="i-owe"]');
   await expect.poll(() => text(total)).toBe(rub(0));
   await openLink(page, HELD);
-  await expect(toast(page)).toContainText('Записал: чужие деньги');
+  await expect(toast(page)).toContainText('Чужие деньги: Иван — 3');
   await tab(page, 'Деньги');
   await expect.poll(() => text(total)).toBe(rub(300000));
   await addTyped(page, HELD2);
@@ -296,7 +298,7 @@ test('«Долги и чужие деньги»: kept money is «я должен
   await expect.poll(() => text(total)).toBe(rub(300000 + 5000000));
   const rows = page.locator('#screen-money [data-section="debts"] .row');
   await expect(rows).toHaveCount(2);
-  await expect(rows.filter({ hasText: 'Иван' })).toContainText('6,5%');
+  await expect(page.locator('#screen-money [data-section="debts"] .person').filter({ hasText: 'Иван' }).locator('.row')).toContainText('6,5%');
   await expect.poll(() => text(page.locator('[data-total="owed-to-me"]'))).toBe(rub(0));
 });
 
@@ -369,7 +371,7 @@ test('wallets: add, rename, hide; a hidden wallet leaves the edit select but sta
   await page.locator('[data-wallet-id="gold"]').click();
   await page.locator('[data-field="wallet-name"]').fill('наличные');
   await page.locator('[data-action="wallet-save"]').click();
-  await expect(page.locator('.error')).toContainText('уже есть');
+  await expect(page.locator('.error').filter({ hasText: 'уже есть' })).toBeVisible();
   // Rename a default wallet.
   await page.locator('[data-field="wallet-name"]').fill('Моя карта');
   await page.locator('[data-action="wallet-save"]').click();
@@ -441,7 +443,7 @@ test('totals match a hand-computed value after a sequence of records', async ({ 
 
 test('an unclear phrase becomes a thought, the text is kept, and tags filter the list', async ({ page }) => {
   await openLink(page, UNCLEAR);
-  await expect(toast(page)).toContainText('Записал: мысль');
+  await expect(toast(page)).toContainText(`Не понял — записал в мысли: ${UNCLEAR}`);
   await expect(saved(page)).toBeVisible();
   await addTyped(page, 'идея: купить удочку #рыбалка');
 
@@ -470,7 +472,7 @@ test('typed text: Enter saves it, Shift+Enter does not', async ({ page }) => {
   await area.press('Backspace');
   await area.press('Enter');
   await expect(saved(page)).toBeVisible();
-  await expect(toast(page)).toContainText('Записал: мысль');
+  await expect(toast(page)).toContainText('Мысль: сделать скворечник');
   await tab(page, 'Мысли');
   await expect(page.locator('#screen-ideas .row')).toHaveCount(1);
   await expect(page.locator('#screen-ideas .row').first()).toContainText('скворечник');
@@ -486,7 +488,7 @@ test('an empty box saves nothing; a record can be edited and deleted from the li
   await page.locator('.sheet [data-field="kind"]').selectOption('expense');
   await page.locator('.sheet [data-field="amount"]').fill('');
   await page.locator('.sheet [data-action="save"]').click();
-  await expect(saved(page)).toContainText('расход');
+  await expect(saved(page)).toContainText('Записал: что-то');
 
   await tab(page, 'Деньги');
   const row = page.locator('[data-section="operations"] .row');

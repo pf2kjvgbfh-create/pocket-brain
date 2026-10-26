@@ -85,6 +85,28 @@ describe('migrations', () => {
     funded.close();
   });
 
+  it('v2: old deposits lose their wallet (they never moved money), so no balance changes; other kinds keep theirs', async () => {
+    const db = await PocketDb.open(await stage6Db({
+      records: [
+        record('d1', { kind: 'deposit', wallet_id: 'cash', fields: { amount_minor: 5_000_000 } }),
+        record('e1', { kind: 'expense', wallet_id: 'cash', fields: { amount_minor: 10_000 } }),
+      ],
+    }));
+    const byId = Object.fromEntries((await db.listRecords()).map((r) => [r.id, r]));
+    expect(byId.d1.wallet_id).toBeNull();
+    expect(byId.d1.fields.amount_minor).toBe(5_000_000);
+    expect(byId.e1.wallet_id).toBe('cash');
+    db.close();
+  });
+
+  it('v2: a «Вклад» wallet used only by old deposits is removed (the deposits stay, without a wallet)', async () => {
+    const db = await PocketDb.open(await stage6Db({ records: [record('d1', { kind: 'deposit', wallet_id: 'deposit', fields: { amount_minor: 100_000 } })] }));
+    expect((await db.listWallets()).some((w) => w.id === 'deposit')).toBe(false);
+    const [dep] = await db.listRecords();
+    expect(dep).toMatchObject({ id: 'd1', kind: 'deposit', wallet_id: null });
+    db.close();
+  });
+
   it('a kept «Вклад» wallet and hidden wallets are not recognised in speech', () => {
     const rows = [
       ...DEFAULT_WALLETS.map((w) => ({ id: w.id, name: w.name, hidden: w.id === 'gold', start_balance_minor: 0 })),
