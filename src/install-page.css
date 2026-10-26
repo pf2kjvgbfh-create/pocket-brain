@@ -1,0 +1,15 @@
+/* The «Установка» page (install/index.html): big one-tap buttons on top of the app styles. */
+.install .btn.big {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 20px 0 6px;
+  padding: 16px;
+  font-size: 20px;
+  text-align: center;
+  text-decoration: none;
+}
+.install .step3 summary { list-style: none; cursor: pointer; }
+.install .step3 summary::-webkit-details-marker { display: none; }
+.install .steps li { font-size: 17px; margin: 8px 0; }
+.install .nowrap { white-space: nowrap; }

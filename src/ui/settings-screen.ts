@@ -10,6 +10,9 @@ export function renderSettings(root: HTMLElement, app: App, backup: BackupContro
     h('h1', {}, 'Настройки'),
     renderBackupPanel(app, backup),
     modelPanel,
+    h('h2', {}, 'Команды для iPhone'),
+    h('p', { class: 'hint' }, 'Кнопка действия и напоминания: две команды ставятся по одному нажатию.'),
+    h('a', { class: 'btn', href: 'install/', 'data-testid': 'install-link' }, 'Установка команд'),
     h('p', { class: 'hint', 'data-testid': 'version' }, `Версия ${APP_VERSION}`),
   );
 }

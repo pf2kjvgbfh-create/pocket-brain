@@ -1,0 +1,10 @@
+#define name Мозг
+#define color purple
+#define glyph microphone
+#include 'actions/text'
+#include 'actions/web'
+
+const dictated = listen("After Pause", "ru-RU")
+const encoded = urlEncode(dictated)
+const link = "https://pf2kjvgbfh-create.github.io/pocket-brain/#t={encoded}"
+openURL(link)

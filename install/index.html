@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Установка</title>
+    <link rel="stylesheet" href="/src/style.css" />
+    <link rel="stylesheet" href="/src/install-page.css" />
+  </head>
+  <body>
+    <!-- Stage 8: the two signed Shortcuts (tools/shortcuts/*.cherri, signed with Cherri + HubSign) in one tap each. -->
+    <main class="install">
+      <h1>Установка</h1>
+      <p class="hint">Три шага, один раз. Открой эту страницу в Safari на iPhone.</p>
+
+      <a class="btn primary big" href="../shortcuts/Мозг.shortcut" data-testid="install-brain">1. Добавить команду «Мозг»</a>
+      <p class="hint">Откроются «Команды» — нажми «Добавить команду». Если Safari сначала спросит про загрузку — нажми «Загрузить», потом открой файл из загрузок (значок со стрелкой вверху).</p>
+
+      <a class="btn primary big" href="../shortcuts/Мозг-напомнить.shortcut" data-testid="install-remind">2. Добавить команду <span class="nowrap">«Мозг-напомнить»</span></a>
+      <p class="hint">Так же — «Добавить команду». Название не меняй: приложение зовёт её по имени.</p>
+
+      <details class="step3" data-testid="install-action-button">
+        <summary class="btn primary big">3. Повесить на кнопку действия</summary>
+        <ol class="steps">
+          <li>Открой «Настройки» iPhone → «Кнопка действия».</li>
+          <li>Листай картинки вбок до «Команда».</li>
+          <li>Нажми «Выбрать команду» → «Мозг».</li>
+          <li>Зажми кнопку сбоку и скажи фразу — откроется приложение и внизу будет «Записал: …».</li>
+        </ol>
+      </details>
+
+      <p><a class="btn big" href="../">Открыть приложение</a></p>
+    </main>
+  </body>
+</html>

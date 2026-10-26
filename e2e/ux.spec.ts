@@ -145,6 +145,12 @@ test('«Не открылось? … как сделать» opens the steps for
   await saved(page).locator('[data-action="shortcut-help"]').click();
   const help = page.getByTestId('shortcut-help');
   await expect(help).toBeVisible();
+  // One tap: the signed Shortcut file (stage 8); the hand-made steps stay folded below as a fallback.
+  const install = help.locator('[data-action="install-remind"]');
+  await expect(install).toBeVisible();
+  expect(decodeURIComponent((await install.getAttribute('href')) ?? '')).toBe('shortcuts/Мозг-напомнить.shortcut');
+  await expect(help.locator('ol.steps')).toBeHidden();
+  await help.locator('details summary').click();
   await expect(help.locator('ol.steps li')).toHaveCount(7);
   await expect(help).toContainText('«Мозг-напомнить»');
   await noHorizontalScroll(page);

@@ -1,0 +1,19 @@
+#define name Мозг-напомнить
+#define color purple
+#define glyph bell
+#define inputs text
+#include 'actions/calendar'
+
+const data = getDictionary(ShortcutInput)
+const title = getValue(data, "title")
+const due = getValue(data, "due")
+const dueDates = getDates(due)
+
+rawAction("is.workflow.actions.addnewreminder", {
+    "WFCalendarItemTitle": "{title}",
+    "WFCalendarItemAlert": true,
+    "WFAlertTrigger": "At Time",
+    "WFAlertEnabled": "Alert",
+    "WFAlertCondition": "At Time",
+    "WFAlertCustomTime": "{dueDates}"
+})

@@ -1,6 +1,6 @@
-// «Не открылось? Нужна Команда «Мозг-напомнить» — как сделать» (stage 7, B7): the steps from SETUP section 4 in
-// plain words, in a small sheet. The ONE place for these steps in the app: stage 8 replaces them with one-tap install
-// buttons on a page «Установка».
+// «Не открылось? Нужна Команда «Мозг-напомнить» — как сделать» (stage 7, B7), in a small sheet: first the one-tap
+// signed Shortcut file (stage 8, `public/shortcuts/`, the same file as on the page «Установка»), then the steps from
+// SETUP section 4 folded as a fallback. The ONE place for these steps in the app.
 import { SHORTCUT_NAME } from '../config';
 import { openSheet } from './app';
 import { h } from './dom';
@@ -22,8 +22,19 @@ export function openShortcutHelp(): void {
       'section',
       { class: 'help', 'data-testid': 'shortcut-help' },
       h('h2', {}, `Как сделать Команду «${SHORTCUT_NAME}»`),
-      h('p', { class: 'hint' }, 'Один раз, 3 минуты. Без неё приложение не может поставить напоминание само.'),
-      h('ol', { class: 'steps' }, ...SHORTCUT_STEPS.map((s) => h('li', {}, s))),
+      h('p', { class: 'hint' }, 'Один раз. Без неё приложение не может поставить напоминание само.'),
+      h(
+        'a',
+        { class: 'btn primary', href: `shortcuts/${SHORTCUT_NAME}.shortcut`, 'data-action': 'install-remind' },
+        `Добавить команду «${SHORTCUT_NAME}»`,
+      ),
+      h('p', { class: 'hint' }, 'Откроются «Команды» — нажми «Добавить команду». Потом вернись сюда и нажми «Поставить напоминание» ещё раз.'),
+      h(
+        'details',
+        {},
+        h('summary', { class: 'link' }, 'Не получилось? Сделать вручную'),
+        h('ol', { class: 'steps' }, ...SHORTCUT_STEPS.map((s) => h('li', {}, s))),
+      ),
       h('div', { class: 'actions' }, close),
     ),
   );
