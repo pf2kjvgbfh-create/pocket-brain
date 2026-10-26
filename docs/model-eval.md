@@ -51,3 +51,13 @@ Not measured here (phone only): speed and memory on the iPhone A19, the real dow
 - Offline: the page comes from the service worker, the model from its cache; a note is still processed.
 - The model is not stable on long notes: «репетитор по английскому 2000 за урок» came back as subscription (ignored),
   idea and income in different runs. Another reason it stays OFF by default, and every change it makes has «Отменить».
+
+## From the live site (laptop, Chromium, 2026-10-25)
+- Shards on GitHub Pages: all 4 answer 200, sent with `Content-Encoding: gzip` (Content-Length 81–88 MB, real 83–95 MB).
+- First download from the live site: 357 MB in ≈ 800 s (≈ 13.5 min; the laptop's internet ≈ 0.45 MB/s), then «Включён».
+  WebGPU is not available in the test browser, so the model runs on the CPU (1 thread).
+- Found only on the live site: wllama 3.8.1 stores the gzip Content-Length as the file size, so the cached model never
+  validated and all 357 MB were downloaded again on every start. Fixed by `src/model/cache-fix.ts`.
+- Reload from the cache on the real Pages was not finished end-to-end (the laptop went to sleep during the ~13 min
+  downloads). Checked instead on `scripts/pages-like-server.mjs` (gzip like Pages): without the fix the 4 shards were
+  downloaded again after a reload; with it, no shard request, and the note was processed offline.
