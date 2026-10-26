@@ -84,7 +84,7 @@ test('a load that was killed last time: the model is turned off and the owner is
 test('the real model: loads from our site, saving stays instant, an unsure note is refined in the background', async ({ page }, info) => {
   // 357 MB and the CPU at full load: run on its own (MODEL_E2E=1), so it does not slow the other tests down.
   test.skip(!process.env.MODEL_E2E || info.project.name !== 'chromium', 'MODEL_E2E=1, Chromium only');
-  test.setTimeout(600_000);
+  test.setTimeout(1_800_000); // the live download over the laptop's internet takes ~14 min
   const requested: string[] = [];
   const modelGets: string[] = [];
   page.on('request', (r) => {
@@ -105,8 +105,8 @@ test('the real model: loads from our site, saving stays instant, an unsure note 
   await tab(page, 'Настройки');
   const t0 = Date.now();
   await page.locator('[data-action="model-toggle"]').click();
-  await expect(page.getByTestId('model-state')).toContainText('Скачиваю');
-  await expect(page.getByTestId('model-state')).toHaveText('Включён: уточняю непонятные фразы в фоне.', { timeout: 540_000 });
+  await expect(page.getByTestId('model-state')).toHaveText(/Загружаю|Скачиваю/); // «Загружаю…» until the first progress tick
+  await expect(page.getByTestId('model-state')).toHaveText('Включён: уточняю непонятные фразы в фоне.', { timeout: 1_500_000 });
   note('download + load + 2 notes, ms', Date.now() - t0);
 
   // Every note was seen by the model. Whatever it said, the result is one of the allowed outcomes: still an idea
