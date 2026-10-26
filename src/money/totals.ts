@@ -62,7 +62,7 @@ function walletDeltas(r: RecordRow): [string | null | undefined, number][] {
 }
 
 /** + they owe me / − I owe them or keep their money. */
-function personDelta(r: RecordRow): number {
+export function personDelta(r: RecordRow): number {
   const amount = amountOf(r);
   const dir = r.fields.direction;
   if (r.kind === 'held') return -amount;

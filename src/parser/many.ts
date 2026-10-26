@@ -8,6 +8,9 @@ import type { Currency, ParseContext, Span } from './types';
 
 const SEPARATOR_RE = /[,;]|(?<![\p{L}])и(?![\p{L}])/u;
 
+// «в 2 магазинах», «из 3 банок»: a bare number right after these prepositions counts things, it is not money.
+const COUNT_AFTER_PREP_RE = /(?<![\p{L}\d])(?:в|во|из)\s+$/u;
+
 export interface ExpensePart {
   title: string;
   amount_minor: number;
@@ -20,7 +23,7 @@ const shift = (s: Span, by: number): Span => ({ start: s.start - by, end: s.end 
 
 /** The parts, or [] when the phrase is one expense. */
 export function splitExpenses(ctx: ParseContext): ExpensePart[] {
-  const amounts = findAmounts(ctx.lower);
+  const amounts = findAmounts(ctx.lower).filter((a) => a.hasCurrency || !COUNT_AFTER_PREP_RE.test(ctx.lower.slice(0, a.start)));
   if (amounts.length < 2 || amounts.some((a) => isCount(ctx.lower, a))) return [];
   const cuts: number[] = [];
   for (let i = 0; i + 1 < amounts.length; i += 1) {

@@ -83,9 +83,24 @@ const blank = (text: string, spans: Span[]): string =>
 
 const mskDay = (d: Date): number => Math.floor((d.getTime() + MSK_OFFSET_MIN * 60_000) / DAY_MS);
 
+const WEEKDAY_RE = word('понедельник\\p{L}*|вторник\\p{L}*|сред[аеуы]|четверг\\p{L}*|пятниц\\p{L}*|суббот\\p{L}*|воскресень\\p{L}*');
+const DATE_RE = /\d|январ|феврал|март|апрел|ма[йя]|июн|июл|август|сентябр|октябр|ноябр|декабр/u;
+
+/** The hour has passed today: a named weekday → in a week, an explicit date → next year, «сегодня» / no day → tomorrow. */
+function nextTime(due: Date, said: string): Date {
+  const lower = fold(said);
+  if (WEEKDAY_RE.test(lower)) return new Date(due.getTime() + 7 * DAY_MS);
+  if (DATE_RE.test(lower)) {
+    const next = new Date(due);
+    next.setUTCFullYear(next.getUTCFullYear() + 1);
+    return next;
+  }
+  return new Date(due.getTime() + DAY_MS);
+}
+
 /**
  * The due time of a reminder. The hour (own regexes) is cut out before chrono reads the day, so chrono never
- * mistakes «3 часа» for a duration. An hour that has already passed today (said «сегодня» or no day) → tomorrow.
+ * mistakes «3 часа» for a duration. An hour that has already passed today → `nextTime`.
  */
 export function findWhen(norm: string, now: Date): FoundWhen | null {
   const lower = fold(norm);
@@ -98,7 +113,7 @@ export function findWhen(norm: string, now: Date): FoundWhen | null {
   }
   const base = times[0] ? new Date(times[0].dueUtc) : now;
   let due = atMskTime(base, hour.hh, hour.mm);
-  if (due.getTime() <= now.getTime() && mskDay(base) === mskDay(now)) due = new Date(due.getTime() + DAY_MS);
+  if (due.getTime() <= now.getTime() && mskDay(base) === mskDay(now)) due = nextTime(due, times[0] ? norm.slice(times[0].start, times[0].end) : '');
   return { dueUtc: due.toISOString(), certainHour: exactHour !== null, noTime: false, spans: [...times, hour] };
 }
 

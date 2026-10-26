@@ -5,6 +5,7 @@ import { findAmount } from '../money';
 import { cutTitle, findSpan, word } from '../text';
 import { findTimes } from '../time';
 import { findWallets, firstWallet } from '../wallets';
+import { findHour } from '../when';
 import type { ParseContext, Rule, RuleMatch, Span } from '../types';
 
 const VERB_RE = word('купил\\p{L}*|потратил\\p{L}*|заплатил\\p{L}*|оплатил\\p{L}*|расход\\p{L}*', 'gu');
@@ -19,7 +20,8 @@ function expense(ctx: ParseContext, explicit: boolean): RuleMatch | null {
   if (!amount) return null;
   const wallets = findWallets(ctx.lower, ctx.wallets);
   if (!explicit && !amount.hasCurrency && wallets.length === 0) return null;
-  const cut: Span[] = [amount, ...wallets, ...verbSpans(ctx.lower)];
+  const hour = findHour(ctx.lower);
+  const cut: Span[] = [amount, ...wallets, ...verbSpans(ctx.lower), ...(hour ? [hour] : [])];
   return {
     kind: 'expense',
     confidence: explicit ? 0.9 : 0.6,
@@ -54,8 +56,11 @@ export const expenseShortRule: Rule = (ctx) => {
 };
 
 /** Words right after the amount that make it a count, not money («30 книг», «2 раза», «5 минут»). */
-const UNIT_RE =
-  /^\s*(?:минут|секунд|час|дн|день|недел|месяц|год|лет|раз|км|кг|гр|штук|шт|страниц|книг|человек|процент|%|метр|литр|шаг|круг|отжиман|приседан|подтягиван|повтор|подход|калори|балл|очк|стакан|чашк|бутыл|яиц|яйц)/u;
+// Whole words only («3000 метро», «1500 часы», «5000 штраф», «700 гречка» are money): the endings are listed.
+const UNIT_RE = new RegExp(
+  '^\\s*(?:минут[аыуе]?|секунд[аыуе]?|час(?:а|ов|у|е)?|дн(?:я|ей|и|ю)|день|недел(?:ь|я|и|ю|е|ей)|месяц(?:а|ев|е)?|год(?:а|ов|у|е)?|лет|раз(?:а|ов)?|км|кг|гр|штук[аиу]?|шт|страниц[аыуе]?|книг[аиуе]?|человек(?:а)?|процент(?:а|ов)?|%|метр(?:а|ов|у|ы)?|литр(?:а|ов|ы)?|шаг(?:а|ов|и)?|круг(?:а|ов|и)?|отжиман\\p{L}*|приседан\\p{L}*|подтягиван\\p{L}*|повтор\\p{L}*|подход\\p{L}*|калори\\p{L}*|балл(?:а|ов|ы)?|очк(?:а|ов|о)|стакан(?:а|ов)?|чашк[аиуе]?|чашек|бутыл(?:ка|ки|ку|ок|ке)|яиц|яйц(?:а|о)?)(?![\\p{L}\\d])',
+  'u',
+);
 
 /** «30 книг», «2 раза»: the number counts something, it is not money. */
 export const isCount = (lower: string, amount: Span): boolean => UNIT_RE.test(lower.slice(amount.end));

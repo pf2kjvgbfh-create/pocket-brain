@@ -18,6 +18,12 @@ test.beforeEach(async ({ page }) => {
   await captureShortcutClicks(page);
 });
 
+// A backup upload can still be in flight when a test ends (after a restore the app rewrites a version-1 copy):
+// drop the mock routes first, or Playwright fails the test on the unfinished route callback.
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+});
+
 const CORS = {
   'access-control-allow-origin': '*',
   // Close to the preflight answer of the real api.github.com (from memory). Cache-Control and Pragma are added to the

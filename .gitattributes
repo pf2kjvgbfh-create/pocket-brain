@@ -2,3 +2,4 @@
 *.png binary
 *.gguf binary
 *.wasm binary
+*.shortcut binary

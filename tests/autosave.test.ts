@@ -151,6 +151,17 @@ describe('stage 7: several records, debts, currency and past days', () => {
     expect(many(text).records[0]).toMatchObject({ kind: 'repay', wallet_id: 'silver' });
   });
 
+  it('review 6: once the held money was fully returned, a later payment to the same person takes a wallet', () => {
+    const base: RecordRow = {
+      id: 'h', kind: 'held', raw_text: 'x', fields: { who: 'Иван', amount_minor: 500000 }, wallet_id: null, due_utc: null,
+      created_utc: NOW.toISOString(), updated_utc: NOW.toISOString(), deleted: false,
+    };
+    const back = { ...base, id: 'b', kind: 'repay' as const, fields: { who: 'Иван', amount_minor: 500000, direction: 'by_me' as const } };
+    expect(many('вернул Ивану 2000', { records: [base, back] }).records[0]).toMatchObject({ kind: 'repay', wallet_id: 'silver' });
+    const part = { ...back, fields: { ...back.fields, amount_minor: 200000 } };
+    expect(many('вернул Ивану 2000', { records: [base, part] }).records[0]).toMatchObject({ kind: 'repay', wallet_id: null });
+  });
+
   it('currency and the day it happened are carried into the record; no due time for a past expense', () => {
     const usd = many('потратил 100 долларов на сувениры').records[0];
     expect(usd.fields.currency).toBe('USD');

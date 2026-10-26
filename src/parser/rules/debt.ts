@@ -3,7 +3,7 @@
 // after «вернул / отдал» also a lower-case name in the dative («вернул ивану 2000»: dictation may not capitalise it).
 // «Должен / должна» moves no money → walletless (autosave sets no default wallet).
 import { findAmount } from '../money';
-import { looksLikeDativeName, looksLikePerson, personName, type NameCase } from '../names';
+import { isRelation, looksLikeDativeName, looksLikePerson, personName, type NameCase } from '../names';
 import { findWallets, firstWallet } from '../wallets';
 import type { Direction, Kind, ParseContext, Rule, RuleMatch } from '../types';
 
@@ -55,7 +55,8 @@ const ME = /(?<![\p{L}])мне(?![\p{L}])/u;
  */
 function isPerson(ctx: ParseContext, p: Pattern, word: string, hasAmount: boolean): boolean {
   const dative = p.loose !== undefined && hasAmount && !ME.test(ctx.lower) && looksLikeDativeName(word);
-  return p.loose === 'only' ? dative : dative || looksLikePerson(word);
+  // «отдал маме 3000» is spending: `only` takes a name, never a relation word (that needs «его деньги» / «долг»).
+  return p.loose === 'only' ? dative && !isRelation(word) : dative || looksLikePerson(word);
 }
 
 function match(ctx: ParseContext, p: Pattern): RuleMatch | null {

@@ -5,6 +5,7 @@ import { walletIdByName, walletRefs } from '../db/wallets';
 import { needsModel } from '../parser/confidence';
 import { parseMany } from '../parser/index';
 import { applyLearned, type Learned } from '../parser/learned';
+import { personDelta } from '../money/totals';
 import { personKey } from '../parser/names';
 import type { ParseResult } from '../parser/types';
 import { KIND_FIELDS, recordFromState, stateFromParse } from './card-model';
@@ -42,13 +43,15 @@ export const partId = (draftId: string, i: number): string => (i === 0 ? draftId
 
 /**
  * DECISIONS item 2: returning money that was only kept («чужие деньги») takes nothing from a wallet. So a «by_me»
- * return to someone who has held money with me and no «I owe» debt gets no wallet.
+ * return to someone whose held money is still with me (net balance of the person < 0) and no «I owe» debt gets no wallet;
+ * once it was fully returned, later payments to him are ordinary.
  */
 function returnsHeldMoney(result: ParseResult, records: RecordRow[]): boolean {
   if (result.kind !== 'repay' || result.fields.direction !== 'by_me' || !result.fields.who) return false;
   const key = personKey(result.fields.who);
   const mine = records.filter((r) => !r.deleted && personKey(r.fields.who) === key);
-  return mine.some((r) => r.kind === 'held') && !mine.some((r) => r.kind === 'debt' && r.fields.direction === 'from_me');
+  const net = mine.reduce((sum, r) => sum + personDelta(r), 0); // < 0: his money is still with me
+  return net < 0 && mine.some((r) => r.kind === 'held') && !mine.some((r) => r.kind === 'debt' && r.fields.direction === 'from_me');
 }
 
 /** Wallet order: named in the phrase > learned > last used > cash. For a transfer only the source gets a default. */

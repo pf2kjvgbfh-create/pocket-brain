@@ -207,3 +207,56 @@ describe('stage 2b: settings travel with the copy', () => {
     });
   });
 });
+
+describe('review 1: a version-1 copy (before the deposit change) is brought up to date on restore', () => {
+  const deposit = rec('dep', '2026-10-20T00:00:00Z', { kind: 'deposit', wallet_id: 'silver', fields: { amount_minor: 5000000 } });
+  const oldFile = (over: Record<string, unknown> = {}): string =>
+    JSON.stringify({
+      format: 'pocket-brain', version: 1, exported_utc: '', settings: { last_wallet_id: 'deposit' },
+      wallets: [w('cash', 'Наличные'), w('silver', 'Серебряная карта'), w('deposit', 'Вклад')],
+      records: [deposit, rec('e1', '2026-10-20T00:00:00Z', { kind: 'expense', wallet_id: 'cash', fields: { amount_minor: 100 } })],
+      ...over,
+    });
+  const clientFor = (repo: FakeRepo) => createGithubClient({ token: FAKE_TOKEN, fetch: repo.fetch, sleep: async () => undefined });
+
+  it('deposits lose their wallet, the unused «Вклад» wallet and a last wallet pointing to it go; a new device ends up clean', async () => {
+    const repo = new FakeRepo(BACKUP.owner, BACKUP.repo);
+    repo.files.set(BACKUP.mainPath, oldFile());
+    const remote = await loadRemote(clientFor(repo));
+    expect(remote.records.find((r) => r.id === 'dep')?.wallet_id).toBeNull();
+    expect(remote.wallets.map((x) => x.id)).not.toContain('deposit');
+    expect(remote.settings).not.toHaveProperty('last_wallet_id');
+
+    const db = await PocketDb.open(`v1-${(n += 1)}`);
+    await applyMerge(db, mergeBackup({ records: await db.listAllRecords(), wallets: await db.listWallets() }, remote));
+    expect((await db.listWallets()).map((x) => x.id)).not.toContain('deposit');
+    expect(await db.getSetting('last_wallet_id')).toBeUndefined();
+    expect((await db.getRecord('dep'))?.wallet_id).toBeNull();
+  });
+
+  it('the «Вклад» wallet stays when a record still uses it or it holds money', async () => {
+    const repo = new FakeRepo(BACKUP.owner, BACKUP.repo);
+    const used = rec('u', '2026-10-20T00:00:00Z', { kind: 'expense', wallet_id: 'deposit' });
+    repo.files.set(BACKUP.mainPath, oldFile({ records: [used] }));
+    expect((await loadRemote(clientFor(repo))).wallets.map((x) => x.id)).toContain('deposit');
+    repo.files.set(BACKUP.mainPath, oldFile({ wallets: [w('deposit', 'Вклад', 700)] }));
+    expect((await loadRemote(clientFor(repo))).wallets.map((x) => x.id)).toContain('deposit');
+  });
+
+  it('a split v1 copy (month files) is upgraded too', async () => {
+    const repo = new FakeRepo(BACKUP.owner, BACKUP.repo);
+    repo.files.set(BACKUP.mainPath, oldFile({ records: [], months: ['2026-10'] }));
+    repo.files.set(`data/records-2026-10.json`, JSON.stringify({ format: 'pocket-brain', version: 1, month: '2026-10', records: [deposit] }));
+    const remote = await loadRemote(clientFor(repo));
+    expect(remote.records[0].wallet_id).toBeNull();
+    expect(remote.wallets.map((x) => x.id)).not.toContain('deposit');
+  });
+
+  it('a current (version 2) copy keeps the wallet of a deposit and everything else', async () => {
+    const repo = new FakeRepo(BACKUP.owner, BACKUP.repo);
+    repo.files.set(BACKUP.mainPath, oldFile({ version: 2, settings: { last_wallet_id: 'silver' } }));
+    const remote = await loadRemote(clientFor(repo));
+    expect(remote.records.find((r) => r.id === 'dep')?.wallet_id).toBe('silver');
+    expect(remote.settings).toHaveProperty('last_wallet_id', 'silver');
+  });
+});

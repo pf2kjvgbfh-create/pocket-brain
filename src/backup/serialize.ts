@@ -1,17 +1,19 @@
 // ALLOWLIST serializer (invariant 3): only the fields named here ever leave the device.
 // A field added to a record later is NOT backed up until it is added to a list below on purpose.
-import { BACKUP_SETTING_KEYS, LAST_WALLET_KEY, LEARNED_KEY } from '../config';
+import { BACKUP_SETTING_KEYS, LAST_WALLET_KEY, LEARNED_KEY, OLD_DEPOSIT_WALLET_ID } from '../config';
 import type { RecordFields, RecordRow, WalletRow } from '../db/types';
 import { sanitizeLearned } from '../parser/learned';
 import { KINDS } from '../ui/card-model';
 import { TOKEN_KEY } from './token';
 
 export const FORMAT = 'pocket-brain';
-export const VERSION = 1;
+// 2 = after DB migration v2 (a deposit takes money from its wallet, no «Вклад» wallet). Copies of version 1 are still read.
+export const VERSION = 2;
 
 export interface BackupFile {
   format: typeof FORMAT;
-  version: typeof VERSION;
+  /** As read from the file (1 or 2); `upgradeBackup` makes it VERSION. */
+  version: number;
   exported_utc: string;
   wallets: WalletRow[];
   settings: Record<string, unknown>;
@@ -142,6 +144,21 @@ export function sanitizeList<T>(list: unknown, one: (v: unknown) => T | null): T
   return Array.isArray(list) ? list.map(one).filter((x): x is T => x !== null) : [];
 }
 
+/**
+ * A version-1 copy gets the same changes as DB migration v2 (src/db/idb.ts): deposits lose their wallet, a last wallet
+ * pointing to the old «Вклад» is dropped, and the «Вклад» wallet goes when no record uses it and it holds no money.
+ * Needs ALL the records (a split copy: call it after the month files are put together).
+ */
+export function upgradeBackup(b: BackupFile): BackupFile {
+  if (b.version >= VERSION) return b;
+  const id = OLD_DEPOSIT_WALLET_ID;
+  const records = b.records.map((r) => (r.kind === 'deposit' && r.wallet_id !== null ? { ...r, wallet_id: null } : r));
+  const used = records.some((r) => r.wallet_id === id || r.fields.to_wallet_id === id);
+  const wallets = b.wallets.filter((w) => w.id !== id || w.start_balance_minor !== 0 || used);
+  const { [LAST_WALLET_KEY]: last, ...rest } = b.settings;
+  return { ...b, version: VERSION, wallets, records, settings: last === id ? rest : b.settings };
+}
+
 /** Parse a main/export file. Throws a plain Russian message when it is not a Pocket Brain copy. */
 export function parseBackup(text: string): BackupFile {
   let v: unknown;
@@ -152,13 +169,15 @@ export function parseBackup(text: string): BackupFile {
   }
   if (!isObj(v) || v.format !== FORMAT) throw new Error('это не копия Карманного мозга');
   if (typeof v.version !== 'number' || v.version > VERSION) throw new Error('копия сделана более новой версией приложения');
-  return {
+  const parsed: BackupFile = {
     format: FORMAT,
-    version: VERSION,
+    version: v.version,
     exported_utc: isStr(v.exported_utc) ? v.exported_utc : '',
     wallets: sanitizeList(v.wallets, sanitizeWallet),
     settings: pickSettings(isObj(v.settings) ? v.settings : {}),
     records: sanitizeList(v.records, sanitizeRecord),
     ...(Array.isArray(v.months) ? { months: v.months.filter(isStr) } : {}),
   };
+  // A split copy is upgraded after its month files are read (loadRemote).
+  return parsed.months ? parsed : upgradeBackup(parsed);
 }

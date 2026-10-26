@@ -5,7 +5,7 @@ import type { RecordRow, WalletRow } from '../db/types';
 import { mergeLearned, sanitizeLearned } from '../parser/learned';
 import type { GithubClient } from './github';
 import { LINKED_KEY } from './runner';
-import { parseBackup, pickSettings, sanitizeList, type BackupFile } from './serialize';
+import { parseBackup, pickSettings, sanitizeList, upgradeBackup, type BackupFile } from './serialize';
 import { assembleBackup, monthPath } from './split';
 import { sanitizeRecord } from './serialize';
 
@@ -89,5 +89,5 @@ export async function loadRemote(client: GithubClient): Promise<BackupFile> {
     const list = (parsed as { records?: unknown }).records;
     months.push({ records: sanitizeList(list, sanitizeRecord) });
   }
-  return assembleBackup(main, months);
+  return upgradeBackup(assembleBackup(main, months));
 }

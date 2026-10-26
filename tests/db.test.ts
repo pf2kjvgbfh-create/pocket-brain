@@ -56,6 +56,16 @@ describe('migrations', () => {
     db2.close();
   });
 
+  it('review 8: a database left open in another tab does not block a later schema upgrade', async () => {
+    const name = freshName();
+    const other = await PocketDb.open(name); // "another tab", never closed by the test
+    const v3 = [...MIGRATIONS, (db: IDBDatabase) => { db.createObjectStore('extra', { keyPath: 'id' }); }];
+    const db2 = await PocketDb.open(name, indexedDB, v3);
+    expect(db2.version).toBe(3);
+    db2.close();
+    other.close();
+  });
+
   /** A stage-6 database (version 1) that still has the «Вклад» wallet. */
   async function stage6Db(over: { balance?: number; records?: RecordRow[]; last?: string } = {}): Promise<string> {
     const name = freshName();

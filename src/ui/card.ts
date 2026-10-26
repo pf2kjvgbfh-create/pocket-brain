@@ -4,6 +4,7 @@ import { fromMskInput } from '../time/format';
 import { DIRECTIONS, KINDS, KIND_FIELDS, KIND_LABEL, recordFromState, understoodSentence, type CardState, type FieldName } from './card-model';
 import type { Kind } from '../db/types';
 import { h, timeEl } from './dom';
+import { cancelAutoOpen } from './auto-open';
 import { remindBlock } from './remind';
 
 export interface CardOptions {
@@ -172,7 +173,7 @@ export function renderCard(opts: CardOptions): HTMLElement {
     h('p', { class: 'raw' }, `Ты сказал: «${state.rawText}»`),
     row('Тип', kindSelect),
     fieldsBox,
-    opts.remindFor ? remindBlock(opts.remindFor, opts.now()) : null,
+    opts.remindFor ? remindBlock(opts.remindFor, opts.now(), cancelAutoOpen) : null,
     actions,
   );
 }

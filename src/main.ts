@@ -2,6 +2,7 @@
 import { createBackupController } from './backup/runner';
 import { PocketDb } from './db/db';
 import { sortWallets } from './db/wallets';
+import { latestOnly } from './refresh';
 import { setupModel, type ModelSetup } from './model/setup';
 import type { App } from './ui/app';
 import { extractHashText, installHashListeners } from './ui/intake';
@@ -39,17 +40,21 @@ async function boot(): Promise<void> {
     records: [],
     now: () => new Date(),
     showTab,
-    refresh: async () => {
-      app.wallets = sortWallets(await db.listWallets());
-      app.records = await db.listRecords();
-      renderTodo(app, screen('todo'));
-      renderMoney(app, screen('money'));
-      renderIdeas(app, screen('ideas'));
-      newScreen?.sync();
-      // After every save or change: records the rules were unsure about go to the local model in the background
-      // (only when the owner turned it on; never awaited, so it never holds up saving).
-      void model?.refiner.run();
-    },
+    // Only the newest of overlapping refreshes draws (src/refresh.ts).
+    refresh: latestOnly(
+      async () => ({ wallets: sortWallets(await db.listWallets()), records: await db.listRecords() }),
+      (data) => {
+        app.wallets = data.wallets;
+        app.records = data.records;
+        renderTodo(app, screen('todo'));
+        renderMoney(app, screen('money'));
+        renderIdeas(app, screen('ideas'));
+        newScreen?.sync();
+        // After every save or change: records the rules were unsure about go to the local model in the background
+        // (only when the owner turned it on; never awaited, so it never holds up saving).
+        void model?.refiner.run();
+      },
+    ),
   };
   let model: ModelSetup | undefined;
   let newScreen: NewScreen | undefined;

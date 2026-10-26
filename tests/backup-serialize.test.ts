@@ -16,7 +16,7 @@ describe('allowlist serializer', () => {
     const f = buildBackup({ records: [rec('a')], wallets, settings: {} }, NOW);
     expect(Object.keys(f)).toEqual(['format', 'version', 'exported_utc', 'wallets', 'settings', 'records']);
     expect(f.format).toBe('pocket-brain');
-    expect(f.version).toBe(1);
+    expect(f.version).toBe(2);
     expect(f.exported_utc).toBe(NOW);
   });
 

@@ -66,7 +66,11 @@ export function openDatabase(name: string, factory: IDBFactory, migrations: Migr
       if (!tx) return;
       for (let v = event.oldVersion; v < migrations.length; v += 1) migrations[v](open.result, tx);
     };
-    open.onsuccess = () => resolve(open.result);
+    open.onsuccess = () => {
+      // A newer version of the app in another tab wants to upgrade: let go, or its upgrade would wait for this tab.
+      open.result.onversionchange = () => open.result.close();
+      resolve(open.result);
+    };
     open.onerror = () => reject(open.error ?? new Error('IndexedDB open failed'));
     open.onblocked = () => reject(new Error('IndexedDB open blocked by another tab'));
   });

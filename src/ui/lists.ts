@@ -51,6 +51,7 @@ const todoList = (app: App, items: TodoItem[]): HTMLElement => h('ul', { class: 
 
 export function renderTodo(app: App, root: HTMLElement): void {
   const nowIso = app.now().toISOString();
+  const doneWasOpen = root.querySelector<HTMLDetailsElement>('details[data-block="done"]')?.open === true;
   const items = app.records
     .filter((r) => r.kind === 'reminder' || r.kind === 'subscription')
     .map((r) => ({ r, due: dueOf(app, r) }))
@@ -67,7 +68,7 @@ export function renderTodo(app: App, root: HTMLElement): void {
   if (past.length > 0) parts.push(h('section', { class: 'block', 'data-block': 'past' }, h('h2', {}, 'Прошедшие'), todoList(app, past)));
   if (done.length > 0) {
     parts.push(
-      h('details', { class: 'block done-block', 'data-block': 'done' }, h('summary', {}, `Сделано (${done.length})`), todoList(app, done)),
+      h('details', { class: 'block done-block', 'data-block': 'done', open: doneWasOpen }, h('summary', {}, `Сделано (${done.length})`), todoList(app, done)),
     );
   }
   root.replaceChildren(...parts);

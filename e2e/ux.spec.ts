@@ -279,3 +279,35 @@ test('«Настройки» without a copy: a red line, plain headings, numbere
   await noHorizontalScroll(page);
   await shot(page, info, 'settings-nobackup', true);
 });
+
+// Review 2026-10-26, item 5: the «Поставить напоминание» button inside the edit sheet must stop the countdown too.
+test('the button in the edit sheet during the countdown opens the Shortcut once (no second automatic open)', async ({ page }) => {
+  await page.goto(`./#t=${REMINDER}`);
+  await expect(page.getByTestId('countdown')).toBeVisible();
+  await tab(page, 'Дела');
+  await page.locator('#screen-todo .row', { hasText: 'позвонить маме' }).click();
+  await page.locator('.sheet [data-action="remind"]').click();
+  await waitPastUndo(page);
+  const clicks = await shortcutClicks(page);
+  expect(clicks).toHaveLength(1);
+  expect(clicks[0].auto).toBe(false);
+});
+
+// Review 2026-10-26, item 9: «Сделано (N)» stays open while it was open.
+test('«Сделано (N)» stays open after a refresh', async ({ page }) => {
+  await page.goto('./');
+  await addTyped(page, REMINDER);
+  await page.getByTestId('countdown').locator('[data-action="auto-stop"]').click();
+  await addTyped(page, 'напомни завтра в 9:00 полить цветы');
+  await tab(page, 'Дела');
+  for (const what of ['позвонить маме', 'полить цветы']) {
+    await page.locator('#screen-todo li', { has: page.locator('.row', { hasText: what }) }).locator('[data-action="done"]').check();
+  }
+  const done = page.locator('#screen-todo [data-block="done"]');
+  await expect(done.locator('summary')).toHaveText('Сделано (2)');
+  await done.locator('summary').click();
+  await expect(done.locator('.row').first()).toBeVisible();
+  await done.locator('li', { has: page.locator('.row', { hasText: 'полить цветы' }) }).locator('[data-action="done"]').uncheck();
+  await expect(done.locator('summary')).toHaveText('Сделано (1)');
+  await expect(done.locator('.row', { hasText: 'позвонить маме' })).toBeVisible(); // still open
+});

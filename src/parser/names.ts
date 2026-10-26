@@ -34,10 +34,13 @@ export function nominative(word: string, nameCase: NameCase): string {
 
 const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** «маме», «брату»: a relation word, not a name. */
+export const isRelation = (word: string): boolean => RELATIONS.test(fold(word));
+
 /** A word that can be a person: capitalised (dictation capitalises names) or a relation word, not a pronoun. */
 export function looksLikePerson(word: string | undefined): boolean {
   if (!word || !/^\p{L}/u.test(word) || NOT_A_NAME.has(fold(word))) return false;
-  return /^\p{Lu}/u.test(word) || RELATIONS.test(fold(word));
+  return /^\p{Lu}/u.test(word) || isRelation(word);
 }
 
 /**
