@@ -26,7 +26,7 @@ const STOP_EXACT = new Set(['для', 'при', 'над', 'под', 'про', '�
 /** Verbs, money words, dates; wallet alias stems are added below. */
 const STOP_PREFIX = [
   'купи', 'потрат', 'заплат', 'оплат', 'отдал', 'отдан', 'получ', 'пришл', 'пришё', 'перевел', 'перевёл', 'перевед', 'перекин', 'положи', 'открыл', 'открыт',
-  'рубл', 'копе', 'тысяч', 'миллион', 'процент', 'напомн', 'завтра', 'послезавтр', 'сегодн', 'вчера', 'утром', 'вечером', 'кажд', 'ежемесяч', 'нужно', 'карт',
+  'вклад', 'рубл', 'копе', 'тысяч', 'миллион', 'процент', 'напомн', 'завтра', 'послезавтр', 'сегодн', 'вчера', 'утром', 'вечером', 'кажд', 'ежемесяч', 'нужно', 'карт',
 ].map(fold);
 
 const aliasStems = DEFAULT_WALLETS.flatMap((w) => (w.aliases ?? []).flatMap((a) => fold(a).split(/[^\p{L}]+/u).filter((p) => p.length >= 3)));
@@ -97,7 +97,7 @@ export function learnFromEdit(input: { before: RecordRow; after: RecordRow; lear
   return cap(out);
 }
 
-const MONEY_KINDS: readonly Kind[] = ['expense', 'income', 'transfer', 'held', 'deposit', 'subscription'];
+const MONEY_KINDS: readonly Kind[] = ['expense', 'income', 'transfer', 'held', 'deposit', 'subscription', 'debt', 'repay'];
 
 /** A phrase the rules took for an idea, forced into a money kind: the amount (and a clean title) is still in the text. */
 function reinterpret(result: ParseResult, kind: Kind): ParseResult {

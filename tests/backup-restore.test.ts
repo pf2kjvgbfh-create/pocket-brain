@@ -85,6 +85,26 @@ describe('restore end to end against the fake repo', () => {
     expect((await dst.listWallets()).find((x) => x.id === 'cash')?.start_balance_minor).toBe(5000);
   });
 
+  it('stage 7 fields survive back up -> restore into a fresh db', async () => {
+    const repo = new FakeRepo(BACKUP.owner, BACKUP.repo);
+    const src = await PocketDb.open(`restore-${(n += 1)}`);
+    await src.setSetting(TOKEN_KEY, FAKE_TOKEN);
+    const rows: RecordRow[] = [
+      rec('debt', '2026-10-20T00:00:00Z', { kind: 'repay', wallet_id: 'cash', fields: { who: 'Петя', amount_minor: 300000, direction: 'to_me' } }),
+      rec('usd', '2026-10-20T00:00:00Z', { kind: 'expense', fields: { amount_minor: 1000, currency: 'EUR', happened_utc: '2026-10-19T09:00:00.000Z' } }),
+      rec('todo', '2026-10-20T00:00:00Z', { kind: 'reminder', fields: { title: 'x', no_time: true, done_utc: '2026-10-20T10:00:00.000Z' } }),
+    ];
+    for (const r of rows) await src.putRecord(r);
+    const ctl = createBackupController({ db: src, fetch: repo.fetch, sleep: async () => undefined });
+    ctl.trigger();
+    await ctl.idle();
+    const dst = await PocketDb.open(`restore-${(n += 1)}`);
+    const client = createGithubClient({ token: FAKE_TOKEN, fetch: repo.fetch, sleep: async () => undefined });
+    await applyMerge(dst, mergeBackup({ records: [], wallets: [] }, await loadRemote(client)));
+    const byId = (a: RecordRow, b: RecordRow): number => (a.id < b.id ? -1 : 1);
+    expect((await dst.listAllRecords()).sort(byId)).toEqual([...rows].sort(byId));
+  });
+
   it('loadRemote on an empty repo says there is no copy', async () => {
     const repo = new FakeRepo(BACKUP.owner, BACKUP.repo);
     const client = createGithubClient({ token: FAKE_TOKEN, fetch: repo.fetch, sleep: async () => undefined });

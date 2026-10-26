@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_WALLETS } from '../src/config';
 import type { RecordRow, WalletRow } from '../src/db/types';
+import { MODEL_KINDS, readKind } from '../src/model/prompt';
 import { refineRecord } from '../src/model/refine';
 
 const NOW = new Date('2026-10-22T09:30:00Z');
@@ -42,6 +43,22 @@ describe('refineRecord', () => {
     const out = refine(idea('в пятницу встреча с юристом'), 'reminder');
     expect(out?.kind).toBe('reminder');
     expect(out?.due_utc).toBe('2026-10-23T09:00:00.000Z'); // Friday 12:00 MSK
+    expect(out?.fields.no_time).toBe(true); // stage 7: «время не названо»
+  });
+
+  it('reminder: the hour and the part of the day are read as the rules read them (stage 7)', () => {
+    const out = refine(idea('в пятницу вечером встреча с юристом'), 'reminder');
+    expect(out?.due_utc).toBe('2026-10-23T16:00:00.000Z'); // Friday 19:00 MSK
+    expect(out?.fields.no_time).toBeUndefined();
+    expect(out?.fields.title).not.toMatch(/вечером|пятницу/);
+  });
+
+  it('the model can never make a debt or a return (stage 7): those come only from the rules', () => {
+    expect(MODEL_KINDS).not.toContain('debt');
+    expect(MODEL_KINDS).not.toContain('repay');
+    expect(readKind('{"kind":"debt"}')).toBeNull();
+    expect(readKind('{"kind":"repay"}')).toBeNull();
+    expect(refine(idea('Петя 3000'), 'debt')).toBeNull();
   });
 
   it('reminder without any date in the text stays an idea', () => {

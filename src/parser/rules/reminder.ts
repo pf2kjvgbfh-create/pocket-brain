@@ -2,34 +2,32 @@
 // or a part of the day («завтра днём», «вечером», «к девяти») with no money.
 import { findAmount } from '../money';
 import { cutTitle, findSpan, word } from '../text';
-import { atMskTime, findClock, findDayOfMonth, findTimes, nextDayOfMonth } from '../time';
+import { atMskTime, findDayOfMonth, findTimes, nextDayOfMonth } from '../time';
+import { findDayPart, findHour, findWhen, type FoundWhen } from '../when';
 import type { ParseContext, Rule, RuleMatch, Span } from '../types';
 
 const MARKER_RE = word('напомни(?:ть)?|напоминание|не\\s+забыть|не\\s+забудь');
 const MARKER_TAIL_RE = /^\s+мне(?![\p{L}])/u;
 
-interface Due {
-  dueUtc: string;
-  certainHour: boolean;
-  spans: Span[];
-}
-
-/** Day of month («17-го числа», own regex: chrono does not know it) first, then chrono. */
-function findDue(ctx: ParseContext): Due | null {
+/** Day of month («17-го числа», own regex: chrono does not know it) first, then the day from chrono + our hour. */
+function findDue(ctx: ParseContext): FoundWhen | null {
   const day = findDayOfMonth(ctx.lower);
   if (day) {
-    const clock = findClock(ctx.lower);
-    const dueUtc = nextDayOfMonth(day.day, ctx.now, clock?.hh, clock?.mm);
-    return { dueUtc, certainHour: clock !== null, spans: clock ? [day, clock] : [day] };
+    const exact = findHour(ctx.lower);
+    const hour = exact ?? findDayPart(ctx.lower);
+    const dueUtc = nextDayOfMonth(day.day, ctx.now, hour?.hh, hour?.mm);
+    return { dueUtc, certainHour: exact !== null, noTime: hour === null, spans: hour ? [day, hour] : [day] };
   }
-  const times = findTimes(ctx.norm, ctx.now);
-  if (times.length === 0) return null;
-  return { dueUtc: times[0].dueUtc, certainHour: times.some((t) => t.certainHour), spans: times };
+  return findWhen(ctx.norm, ctx.now);
 }
 
-function build(ctx: ParseContext, due: Due | null, marker: Span | null, confidence: number): RuleMatch {
+function build(ctx: ParseContext, due: FoundWhen | null, marker: Span | null, confidence: number): RuleMatch {
   const spans = [...(due?.spans ?? []), ...(marker ? [marker] : [])];
-  return { kind: 'reminder', confidence, fields: { title: cutTitle(ctx.norm, spans), due_utc: due?.dueUtc } };
+  return {
+    kind: 'reminder',
+    confidence,
+    fields: { title: cutTitle(ctx.norm, spans), due_utc: due?.dueUtc, no_time: due?.noTime || undefined },
+  };
 }
 
 /** «напомни(ть)» / «не забыть» anywhere → reminder (with or without a recognised time). */
@@ -51,9 +49,6 @@ export const reminderImplicitRule: Rule = (ctx) => {
   return build(ctx, due, null, 0.75);
 };
 
-/** Hours (MSK) for a part of the day (the text is folded: «днём» → «днем»). */
-const DAY_PART_HOURS: Record<string, number> = { утром: 9, днем: 13, вечером: 19 };
-const DAY_PART_RE = word('утром|днем|вечером');
 // «к девяти»: normalization does not turn these genitive hour words into digits.
 const BY_HOUR_WORDS = ['одному', 'двум', 'трем', 'четырем', 'пяти', 'шести', 'семи', 'восьми', 'девяти', 'десяти', 'одиннадцати', 'двенадцати'];
 const BY_HOUR_RE = word(`к\\s+(\\d{1,2}|${BY_HOUR_WORDS.join('|')})`);
@@ -71,12 +66,11 @@ function findByHour(lower: string): (Span & { hh: number }) | null {
  *  Without a day word it is today, or tomorrow when that hour has passed. */
 export const reminderDayPartRule: Rule = (ctx) => {
   if (findAmount(ctx.lower)) return null;
-  const part = findSpan(ctx.lower, DAY_PART_RE);
+  const part = findDayPart(ctx.lower);
   const byHour = findByHour(ctx.lower);
   if (!part && !byHour) return null;
-  const partWord = part ? ctx.lower.slice(part.start, part.end) : '';
-  let hh = byHour ? byHour.hh : DAY_PART_HOURS[partWord];
-  if (byHour && partWord === 'вечером' && hh < 12) hh += 12;
+  let hh = byHour ? byHour.hh : (part as { hh: number }).hh;
+  if (byHour && part?.hh === 19 && hh < 12) hh += 12;
   const times = findTimes(ctx.norm, ctx.now);
   let due = atMskTime(times[0] ? new Date(times[0].dueUtc) : ctx.now, hh, 0);
   if (due.getTime() <= ctx.now.getTime()) {

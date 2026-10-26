@@ -27,7 +27,15 @@ export interface BackupSource {
   settings: Record<string, unknown>;
 }
 
-const FIELD_KEYS: (keyof RecordFields)[] = ['title', 'amount_minor', 'to_wallet_id', 'who', 'rate', 'term_months', 'day', 'tags'];
+const FIELD_KEYS: (keyof RecordFields)[] = [
+  'title', 'amount_minor', 'to_wallet_id', 'who', 'rate', 'term_months', 'day', 'tags',
+  // stage 7
+  'direction', 'currency', 'happened_utc', 'no_time', 'done_utc',
+];
+const DIRECTION_VALUES = ['to_me', 'from_me', 'by_me'] as const;
+const CURRENCY_VALUES = ['USD', 'EUR'] as const;
+const isOneOf = <T extends string>(list: readonly T[], v: unknown): v is T => typeof v === 'string' && (list as readonly string[]).includes(v);
+const isIsoTime = (v: unknown): v is string => typeof v === 'string' && !Number.isNaN(Date.parse(v));
 
 export function serializeRecord(r: RecordRow): RecordRow {
   const fields: RecordFields = {};
@@ -97,6 +105,11 @@ function sanitizeFields(v: unknown): RecordFields {
   if (isNum(v.term_months)) out.term_months = Math.round(v.term_months);
   if (isNum(v.day)) out.day = Math.round(v.day);
   if (Array.isArray(v.tags)) out.tags = v.tags.filter(isStr);
+  if (isOneOf(DIRECTION_VALUES, v.direction)) out.direction = v.direction;
+  if (isOneOf(CURRENCY_VALUES, v.currency)) out.currency = v.currency;
+  if (isIsoTime(v.happened_utc)) out.happened_utc = v.happened_utc;
+  if (v.no_time === true) out.no_time = true;
+  if (isIsoTime(v.done_utc)) out.done_utc = v.done_utc;
   return out;
 }
 

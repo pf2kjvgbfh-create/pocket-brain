@@ -5,8 +5,8 @@ import type { DraftRow, Kind, RecordRow } from '../db/types';
 import { sanitizeLearned } from '../parser/learned';
 import { buildPayload, buildShortcutUrl } from '../shortcut/payload';
 import { closeAllSheets, editRecord, type App } from './app';
-import { buildAutoRecord } from './autosave';
-import { alreadySentence, savedSentence } from './card-model';
+import { buildAutoRecords } from './autosave';
+import { alreadySentence, savedManySentence, savedSentence } from './card-model';
 import { h } from './dom';
 import { intakeText } from './intake';
 import { openShortcut, remindBlock } from './remind';
@@ -24,12 +24,14 @@ const TAB_OF_KIND: Record<Kind, { tab: string; name: string }> = {
   transfer: { tab: 'money', name: 'Деньги' },
   held: { tab: 'money', name: 'Деньги' },
   deposit: { tab: 'money', name: 'Деньги' },
+  debt: { tab: 'money', name: 'Деньги' },
+  repay: { tab: 'money', name: 'Деньги' },
   idea: { tab: 'ideas', name: 'Мысли' },
 };
 
 export interface NewScreen {
-  /** Text from the link (dedupe on) or from the box (dedupe off): saved at once. */
-  openText: (text: string, fromLink: boolean) => Promise<void>;
+  /** Text from the link or from the box: saved at once. `repeat` = the same opening of a link came back (reload). */
+  openText: (text: string, fromLink: boolean, repeat?: boolean) => Promise<void>;
   /** After a reload: save the drafts a killed page left behind (no automatic reminder). */
   restoreDraft: () => Promise<void>;
 }
@@ -46,9 +48,9 @@ export function createNewScreen(app: App, root: HTMLElement): NewScreen {
   };
 
   /** A newer phrase cancels the pending toast (and with it the automatic reminder) at once, before anything is awaited. */
-  const submit = (text: string, fromLink: boolean): Promise<void> => {
+  const submit = (text: string, fromLink: boolean, repeat = false): Promise<void> => {
     dismissToast();
-    return enqueue(() => open(text, fromLink));
+    return enqueue(() => open(text, fromLink, repeat));
   };
 
   const showIdle = (prefill = '', problem = ''): void => {
@@ -108,8 +110,9 @@ export function createNewScreen(app: App, root: HTMLElement): NewScreen {
    * «Отменить»: the record goes away and the wallet it named stops being «the last one». The text comes back into
    * the box (it is never lost) — unless the owner has already started typing something else there.
    */
-  const undo = async (rec: RecordRow, walletBefore: WalletBefore): Promise<void> => {
-    await app.db.softDelete(rec.id, app.now().toISOString());
+  const undo = async (recs: RecordRow[], walletBefore: WalletBefore): Promise<void> => {
+    const rec = recs[0];
+    await app.db.softDeleteMany(recs.map((r) => r.id), app.now().toISOString());
     if (walletBefore.changed) await app.db.setSetting(LAST_WALLET_KEY, walletBefore.value);
     await app.refresh();
     const box = root.querySelector<HTMLTextAreaElement>('#new-text');
@@ -125,16 +128,21 @@ export function createNewScreen(app: App, root: HTMLElement): NewScreen {
     if (payload) openShortcut(buildShortcutUrl(payload));
   };
 
-  const present = (rec: RecordRow, autoOpen: boolean, walletBefore: WalletBefore = UNCHANGED): void => {
-    showDone(rec, savedSentence(rec, app.wallets, app.now()));
+  /** One phrase may give several records («кофе 300 и круассан 250»): one toast, «Отменить» removes them all. */
+  const present = (recs: RecordRow[], autoOpen: boolean, walletBefore: WalletBefore = UNCHANGED): void => {
+    const rec = recs[0];
+    const single = recs.length === 1;
+    const sentence = savedManySentence(recs, app.wallets, app.now());
+    showDone(rec, sentence);
     showToast({
-      text: savedSentence(rec, app.wallets, app.now()),
+      text: sentence,
       ms: UNDO_MS,
       actions: [
-        { label: 'Отменить', action: 'undo', run: () => void undo(rec, walletBefore) },
-        { label: 'Изменить', action: 'edit', run: () => edit(rec) },
+        { label: 'Отменить', action: 'undo', run: () => void undo(recs, walletBefore) },
+        // Several records are edited one by one from the lists.
+        ...(single ? [{ label: 'Изменить', action: 'edit', run: () => edit(rec) }] : []),
       ],
-      onExpire: autoOpen && buildPayload(rec, app.now()) ? () => void autoOpenShortcut(rec) : undefined,
+      onExpire: single && autoOpen && buildPayload(rec, app.now()) ? () => void autoOpenShortcut(rec) : undefined,
     });
   };
 
@@ -149,24 +157,24 @@ export function createNewScreen(app: App, root: HTMLElement): NewScreen {
   };
 
   /** Draft -> record. Settings first (the record write triggers the backup), then ONE transaction: record + draft removal. */
-  async function saveDraft(draft: DraftRow): Promise<{ record: RecordRow; walletBefore: WalletBefore }> {
+  async function saveDraft(draft: DraftRow): Promise<{ records: RecordRow[]; walletBefore: WalletBefore }> {
     const [last, learned] = await Promise.all([app.db.getSetting<string>(LAST_WALLET_KEY), app.db.getSetting<unknown>(LEARNED_KEY)]);
-    const { record, namedWalletId } = buildAutoRecord({
-      draft, wallets: app.wallets, lastWalletId: last, learned: sanitizeLearned(learned), now: app.now(),
+    const { records, namedWalletId } = buildAutoRecords({
+      draft, wallets: app.wallets, lastWalletId: last, learned: sanitizeLearned(learned), now: app.now(), records: app.records,
     });
     const walletBefore: WalletBefore = namedWalletId && namedWalletId !== last ? { changed: true, value: last } : UNCHANGED;
     if (walletBefore.changed) await app.db.setSetting(LAST_WALLET_KEY, namedWalletId);
-    await app.db.saveFromDraft(record, draft.id);
-    return { record, walletBefore };
+    await app.db.saveManyFromDraft(records, draft.id);
+    return { records, walletBefore };
   }
 
-  async function open(text: string, fromLink: boolean): Promise<void> {
+  async function open(text: string, fromLink: boolean, repeat: boolean): Promise<void> {
     closeAllSheets();
     app.showTab('new');
     let saved: Awaited<ReturnType<typeof saveDraft>>;
     let draftId: string | null = null;
     try {
-      const result = await intakeText(app.db, text, app.now(), { dedupe: fromLink });
+      const result = await intakeText(app.db, text, app.now(), { link: fromLink, repeat: fromLink && repeat });
       if (result.type === 'saved') {
         presentAlready(result.record);
         return;
@@ -182,15 +190,15 @@ export function createNewScreen(app: App, root: HTMLElement): NewScreen {
     }
     // Saved: whatever fails from here on must not invite a second save of the same phrase.
     await app.refresh().catch((err: unknown) => console.error('refresh failed', err instanceof Error ? err.name : 'error'));
-    present(saved.record, true, saved.walletBefore);
+    present(saved.records, true, saved.walletBefore);
   }
 
   async function restore(): Promise<void> {
     const drafts = (await app.db.listDrafts()).reverse(); // oldest first
-    let last: RecordRow | null = null;
+    let last: RecordRow[] | null = null;
     for (const draft of drafts) {
       try {
-        last = (await saveDraft(draft)).record;
+        last = (await saveDraft(draft)).records;
       } catch (err) {
         console.error('draft restore failed', err instanceof Error ? err.name : 'error');
       }
@@ -202,7 +210,7 @@ export function createNewScreen(app: App, root: HTMLElement): NewScreen {
 
   showIdle();
   return {
-    openText: (text, fromLink) => submit(text, fromLink),
+    openText: (text, fromLink, repeat) => submit(text, fromLink, repeat),
     restoreDraft: () => enqueue(restore),
   };
 }

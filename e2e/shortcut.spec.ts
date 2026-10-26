@@ -1,5 +1,5 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
-import { captureShortcutClicks, shortcutClicks, waitPastUndo, type ShortcutClick } from './helpers';
+import { captureShortcutClicks, reloadWithLink, shortcutClicks, waitPastUndo, type ShortcutClick } from './helpers';
 
 // A saved reminder opens the Shortcut «Мозг-напомнить» BY ITSELF when the toast's undo window passes
 // (<a data-action="remind-auto"> click). The test never opens the scheme: captureShortcutClicks (a test-side click
@@ -107,13 +107,13 @@ test('a newer phrase inside the window cancels the first automatic open', async 
   expect(decode(clicks[0]).title).toBe('купить хлеб — 10:00 МСК');
 });
 
-test('the same link again after the automatic open: «Уже записано», no new open, one record', async ({ page }) => {
+test('a reload with the link after the automatic open: «Уже записано», no new open, one record', async ({ page }) => {
   await page.goto(`./#t=${REMINDER}`);
   await expect.poll(async () => (await shortcutClicks(page)).length, { timeout: AUTO_TIMEOUT }).toBe(1);
-  await page.goto(`./#t=${REMINDER}`);
+  await reloadWithLink(page, REMINDER); // the click log starts empty again on the reloaded page
   await expect(toast(page)).toContainText('Уже записано: напоминание');
   await waitPastUndo(page);
-  expect((await shortcutClicks(page)).length).toBe(1);
+  expect((await shortcutClicks(page)).length).toBe(0);
   await page.getByRole('tab', { name: 'Дела' }).click();
   await expect(page.locator('#screen-todo .row')).toHaveCount(1);
 });

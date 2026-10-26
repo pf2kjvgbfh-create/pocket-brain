@@ -122,3 +122,26 @@ describe('stage 2b: refine flag and the settings that travel with the copy', () 
     expect(parseBackup(text({ github_token: FAKE_TOKEN })).settings).toEqual({});
   });
 });
+
+describe('stage 7: new fields travel with the copy', () => {
+  const debt = rec('d', {
+    kind: 'debt', wallet_id: null, raw_text: 'Маша должна мне 1500',
+    fields: { who: 'Маша', amount_minor: 150000, direction: 'to_me' },
+  });
+  const usd = rec('u', { fields: { title: 'кофе', amount_minor: 1000, currency: 'USD', happened_utc: '2026-10-21T09:00:00.000Z' } });
+  const todo = rec('t', {
+    kind: 'reminder', wallet_id: null, due_utc: '2026-10-23T09:00:00.000Z',
+    fields: { title: 'позвонить', no_time: true, done_utc: '2026-10-23T10:00:00.000Z' },
+  });
+
+  it('serialize -> parse keeps direction, currency, happened_utc, no_time and done_utc', () => {
+    const f = buildBackup({ records: [debt, usd, todo], wallets, settings: {} }, NOW);
+    expect(parseBackup(JSON.stringify(f)).records).toEqual([debt, usd, todo]);
+  });
+
+  it('wrong values of the new fields are dropped', () => {
+    const bad = { ...rec('b'), fields: { title: 'x', direction: 'sideways', currency: 'GBP', happened_utc: 'вчера', no_time: 'yes', done_utc: 5 } };
+    const text = JSON.stringify({ format: 'pocket-brain', version: 1, exported_utc: NOW, wallets: [], settings: {}, records: [bad] });
+    expect(parseBackup(text).records[0].fields).toEqual({ title: 'x' });
+  });
+});

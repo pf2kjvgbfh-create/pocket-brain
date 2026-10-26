@@ -34,3 +34,12 @@ export const shortcutClicks = (page: Page): Promise<ShortcutClick[]> => page.eva
 
 /** Let the undo window pass (plus a margin) so a wrongly scheduled automatic open would have happened by now. */
 export const waitPastUndo = (page: Page): Promise<void> => page.waitForTimeout(UNDO_MS + 1500);
+
+/**
+ * The SAME opening of a link coming back (DECISIONS stage 7, item 11): the link is put back into the address (as if
+ * the page had not removed it yet) and the page is reloaded, so the browser reports a «reload» navigation.
+ */
+export async function reloadWithLink(page: Page, phrase: string): Promise<void> {
+  await page.evaluate((p) => history.replaceState(null, '', `${location.pathname}#t=${encodeURIComponent(p)}`), phrase);
+  await page.reload();
+}

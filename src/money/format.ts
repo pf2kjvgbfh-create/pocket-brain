@@ -12,6 +12,14 @@ export function formatRub(minor: number): string {
   return `${sign}${grouped},${kop}${NBSP}₽`;
 }
 
+const CURRENCY_SIGN = { USD: '$', EUR: '€' } as const;
+
+/** Rubles as formatRub; dollars / euros as «100,00 $» (never added to a ruble sum). */
+export function formatMoney(minor: number, currency?: 'USD' | 'EUR'): string {
+  const rub = formatRub(minor);
+  return currency ? `${rub.slice(0, -1)}${CURRENCY_SIGN[currency]}` : rub;
+}
+
 /** «1 234,50» / «500» -> integer kopecks; anything that is not a plain non-negative amount -> undefined. */
 export function parseRubles(input: string): number | undefined {
   const s = input.replace(/[\s  ]/g, '').replace(',', '.');

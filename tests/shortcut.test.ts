@@ -151,3 +151,21 @@ describe('buildShortcutUrl', () => {
     expect(back).toEqual(p);
   });
 });
+
+describe('stage 7: no reminder for money that already moved', () => {
+  const wallets = [{ id: 'cash', name: 'Наличные', hidden: false, start_balance_minor: 0 }];
+  const auto = (text: string): RecordRow =>
+    buildAutoRecord({ draft: { id: 'd1', text, created_utc: NOW.toISOString() }, wallets, lastWalletId: null, learned: {}, now: NOW }).record;
+
+  it('a debt, a return and a past-day expense give no payload (and no due time)', () => {
+    for (const text of ['одолжил Пете 3000', 'Петя вернул мне 3000', 'вчера потратил 500 на такси']) {
+      const r = auto(text);
+      expect(['debt', 'repay', 'expense'], text).toContain(r.kind);
+      expect(r.due_utc, text).toBeNull();
+      expect(buildPayload(r, NOW), text).toBeNull();
+    }
+    expect(auto('вчера потратил 500 на такси').fields.happened_utc).toBe('2026-10-21T09:00:00.000Z');
+    expect(buildPayload(rec({ kind: 'debt', fields: { who: 'Петя', amount_minor: 1, direction: 'to_me' } }), NOW)).toBeNull();
+    expect(buildPayload(rec({ kind: 'repay', fields: { who: 'Петя', amount_minor: 1, direction: 'by_me' } }), NOW)).toBeNull();
+  });
+});

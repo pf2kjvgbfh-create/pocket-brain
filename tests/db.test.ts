@@ -18,14 +18,14 @@ function record(id: string, over: Partial<RecordRow> = {}): RecordRow {
 }
 
 describe('migrations', () => {
-  it('opens an empty database: 4 stores, version 1, default wallets with stable ids', async () => {
+  it('opens an empty database: 4 stores, version 2, default wallets with stable ids (no «Вклад» since stage 7)', async () => {
     const db = await PocketDb.open(freshName());
-    expect(db.version).toBe(1);
+    expect(db.version).toBe(2);
     expect(db.storeNames.sort()).toEqual(['drafts', 'records', 'settings', 'wallets']);
     expect(await db.listRecords()).toEqual([]);
     expect(await db.listDrafts()).toEqual([]);
     const wallets = await db.listWallets();
-    expect(wallets.map((w) => w.id).sort()).toEqual(['cash', 'deposit', 'gold', 'silver', 'tinkoff']);
+    expect(wallets.map((w) => w.id).sort()).toEqual(['cash', 'gold', 'silver', 'tinkoff']);
     expect(wallets.find((w) => w.id === 'gold')).toEqual({ id: 'gold', name: 'Золотая карта', hidden: false, start_balance_minor: 0 });
     db.close();
   });
@@ -38,7 +38,7 @@ describe('migrations', () => {
     const again = await PocketDb.open(name);
     const gold = (await again.listWallets()).find((w) => w.id === 'gold');
     expect(gold).toEqual({ id: 'gold', name: 'Копилка', hidden: true, start_balance_minor: 777 });
-    expect(await again.listWallets()).toHaveLength(5);
+    expect(await again.listWallets()).toHaveLength(4);
     again.close();
   });
 
@@ -47,13 +47,65 @@ describe('migrations', () => {
     const db1 = await PocketDb.open(name);
     await db1.putRecord(record('keep-me'));
     db1.close();
-    const v2 = [...MIGRATIONS, (db: IDBDatabase) => { db.createObjectStore('extra', { keyPath: 'id' }); }];
-    const db2 = await PocketDb.open(name, indexedDB, v2);
-    expect(db2.version).toBe(2);
+    const v3 = [...MIGRATIONS, (db: IDBDatabase) => { db.createObjectStore('extra', { keyPath: 'id' }); }];
+    const db2 = await PocketDb.open(name, indexedDB, v3);
+    expect(db2.version).toBe(3);
     expect(db2.storeNames).toContain('extra');
     expect((await db2.getRecord('keep-me'))?.id).toBe('keep-me');
-    expect(await db2.listWallets()).toHaveLength(5);
+    expect(await db2.listWallets()).toHaveLength(4);
     db2.close();
+  });
+
+  /** A stage-6 database (version 1) that still has the «Вклад» wallet. */
+  async function stage6Db(over: { balance?: number; records?: RecordRow[]; last?: string } = {}): Promise<string> {
+    const name = freshName();
+    const v1 = await PocketDb.open(name, indexedDB, MIGRATIONS.slice(0, 1));
+    await v1.putWallet({ id: 'deposit', name: 'Вклад', hidden: false, start_balance_minor: over.balance ?? 0 });
+    for (const r of over.records ?? []) await v1.putRecord(r);
+    if (over.last) await v1.setSetting('last_wallet_id', over.last);
+    v1.close();
+    return name;
+  }
+
+  it('v2 removes an unused «Вклад» wallet and resets a «last wallet» that pointed to it', async () => {
+    const db = await PocketDb.open(await stage6Db({ last: 'deposit' }));
+    expect((await db.listWallets()).map((w) => w.id).sort()).toEqual(['cash', 'gold', 'silver', 'tinkoff']);
+    expect(await db.getSetting('last_wallet_id')).toBeUndefined();
+    db.close();
+  });
+
+  it('v2 keeps «Вклад» when a record uses it (even a transfer target) or it has a start balance; another last wallet stays', async () => {
+    const used = await PocketDb.open(await stage6Db({ records: [record('t', { kind: 'transfer', wallet_id: 'gold', fields: { to_wallet_id: 'deposit' } })], last: 'gold' }));
+    expect((await used.listWallets()).some((w) => w.id === 'deposit')).toBe(true);
+    expect(await used.getSetting('last_wallet_id')).toBe('gold');
+    used.close();
+    const funded = await PocketDb.open(await stage6Db({ balance: 100, last: 'deposit' }));
+    expect((await funded.listWallets()).some((w) => w.id === 'deposit')).toBe(true);
+    expect(await funded.getSetting('last_wallet_id')).toBeUndefined();
+    funded.close();
+  });
+
+  it('a kept «Вклад» wallet and hidden wallets are not recognised in speech', () => {
+    const rows = [
+      ...DEFAULT_WALLETS.map((w) => ({ id: w.id, name: w.name, hidden: w.id === 'gold', start_balance_minor: 0 })),
+      { id: 'deposit', name: 'Вклад', hidden: false, start_balance_minor: 0 },
+    ];
+    const names = walletRefs(rows).map((w) => w.name);
+    expect(names).toEqual(['Наличные', 'Серебряная карта', 'Тинькофф']);
+    expect(parse('купил кофе 200 рублей золотой картой', new Date('2026-10-22T09:00:00Z'), walletRefs(rows)).fields.wallet).toBeUndefined();
+  });
+});
+
+describe('several records from one phrase', () => {
+  it('saveManyFromDraft writes all records and drops the draft; softDeleteMany removes them all', async () => {
+    const db = await PocketDb.open(freshName());
+    await db.putDraft({ id: 'd1', text: 'кофе 300 и круассан 250', created_utc: '2026-10-22T09:00:00.000Z' });
+    await db.saveManyFromDraft([record('d1', { kind: 'expense' }), record('d1-2', { kind: 'expense' })], 'd1');
+    expect((await db.listRecords()).map((r) => r.id).sort()).toEqual(['d1', 'd1-2']);
+    expect(await db.listDrafts()).toEqual([]);
+    expect(await db.softDeleteMany(['d1', 'd1-2', 'missing'], '2026-10-22T09:01:00.000Z')).toBe(2);
+    expect(await db.listRecords()).toEqual([]);
+    db.close();
   });
 });
 
@@ -134,7 +186,7 @@ describe('wallet helpers', () => {
   const base = DEFAULT_WALLETS.map((w) => ({ id: w.id, name: w.name, hidden: false, start_balance_minor: 0 }));
 
   it('a renamed default wallet still matches its spoken aliases and its new name', () => {
-    const wallets = base.map((w) => (w.id === 'gold' ? { ...w, name: 'Копилка', hidden: true } : w));
+    const wallets = base.map((w) => (w.id === 'gold' ? { ...w, name: 'Копилка' } : w));
     const refs = walletRefs(wallets);
     const r = parse('купил воду за пятьсот рублей золотая карта', new Date('2026-10-22T09:00:00Z'), refs);
     expect(r.fields.wallet).toBe('Копилка');

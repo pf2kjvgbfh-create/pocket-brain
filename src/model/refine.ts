@@ -6,7 +6,7 @@ import { findAmount } from '../parser/money';
 import { fold, normalize } from '../parser/normalize';
 import { findTags } from '../parser/rules/idea';
 import { cutTitle } from '../parser/text';
-import { findTimes } from '../parser/time';
+import { findWhen } from '../parser/when';
 import type { Kind, ParseResult } from '../parser/types';
 import { findWallets, firstWallet } from '../parser/wallets';
 import { defaultWalletId } from '../ui/autosave';
@@ -21,8 +21,10 @@ function parseAs(kind: Kind, text: string, said: Date, wallets: WalletRow[]): Pa
   const lower = fold(norm);
   const base = { kind, confidence: 0.7, tags: findTags(lower).tags, raw_text: text };
   if (kind === 'reminder') {
-    const time = findTimes(norm, said)[0];
-    return time ? { ...base, fields: { title: cutTitle(norm, [time]), due_utc: time.dueUtc } } : null;
+    // Same reading as the rules: own hour and part of the day, then chrono for the day; no hour → 12:00 + no_time.
+    const when = findWhen(norm, said);
+    if (!when) return null;
+    return { ...base, fields: { title: cutTitle(norm, when.spans), due_utc: when.dueUtc, no_time: when.noTime || undefined } };
   }
   const amount = findAmount(lower);
   if (!amount) return null;

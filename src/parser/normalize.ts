@@ -14,6 +14,8 @@ const SMALL: Record<string, number> = {
 
 const MULTIPLIERS: Record<string, number> = {
   тысяча: 1000, тысячи: 1000, тысяч: 1000, тысячу: 1000, тыс: 1000,
+  // spoken «тыща»
+  тыща: 1000, тыщи: 1000, тыщ: 1000, тыщу: 1000,
   миллион: 1_000_000, миллиона: 1_000_000, миллионов: 1_000_000, млн: 1_000_000,
 };
 
@@ -23,6 +25,8 @@ const ORDINALS: Record<string, number> = {
   тринадцатого: 13, четырнадцатого: 14, пятнадцатого: 15, шестнадцатого: 16,
   семнадцатого: 17, восемнадцатого: 18, девятнадцатого: 19, двадцатого: 20, тридцатого: 30,
 };
+// «каждое пятое число»: the neuter form ends in -ое instead of -ого.
+for (const [w, n] of Object.entries(ORDINALS)) ORDINALS[w.replace(/ого$/, 'ое')] = n;
 
 const HALF_AND_ONE = new Set(['полтора', 'полторы']);
 
@@ -115,11 +119,16 @@ function joinDigitGroups(s: string): string {
   return s.replace(/(?<![\d.,])\d{1,3}(?: \d{3})+(?!\d)/g, (m) => m.replace(/ /g, ''));
 }
 
+/** «5к» / «2,5к» → «5000» / «2500» (the spoken «к» = thousand, written right after the number). */
+function kiloAmounts(s: string): string {
+  return s.replace(/(?<![\p{L}\d.,])(\d+(?:[.,]\d+)?)к(?![\p{L}\d])/giu, (_m, n: string) => String(Math.round(toNumber(n) * 1000)));
+}
+
 /** Normalize dictated Russian text. The original text must be kept separately by the caller. */
 export function normalize(text: string): string {
-  const spaced = joinDigitGroups(text.replace(/[   ]/g, ' '))
+  const spaced = kiloAmounts(joinDigitGroups(text.replace(/[   ]/g, ' '))
     // chrono reads «полтора часа» as one hour; say it in minutes.
-    .replace(/(?<![\p{L}\d])полтора\s+час\p{L}*/giu, '90 минут');
+    .replace(/(?<![\p{L}\d])полтора\s+час\p{L}*/giu, '90 минут'));
   const tokens = spaced.match(TOKEN_RE) ?? [];
   const out: string[] = [];
   let i = 0;

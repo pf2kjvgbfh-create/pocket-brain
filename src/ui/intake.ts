@@ -30,13 +30,17 @@ export function newId(): string {
 export type IntakeResult = { type: 'draft'; draft: DraftRow } | { type: 'saved'; record: RecordRow };
 
 /**
- * dedupe (the link case): a pending draft with the same text is reused; a live record with the same raw text
- * saved in the last DUPLICATE_WINDOW_MIN minutes is shown as «Уже сохранено» instead of a new draft.
+ * link: a pending draft with the same text is reused (a killed page left it; it is saved once).
+ * repeat (DECISIONS item 11: the SAME opening of a link came back — reload, «back», a page restored from memory): a live
+ * record with the same raw text saved in the last DUPLICATE_WINDOW_MIN minutes is shown as «Уже записано» instead.
+ * A fresh link with the same phrase is a new dictation and makes a new record.
  */
-export async function intakeText(db: PocketDb, text: string, now: Date, opts: { dedupe: boolean }): Promise<IntakeResult> {
-  if (opts.dedupe) {
+export async function intakeText(db: PocketDb, text: string, now: Date, opts: { link: boolean; repeat: boolean }): Promise<IntakeResult> {
+  if (opts.link) {
     const pending = await db.findDraftByText(text);
     if (pending) return { type: 'draft', draft: pending };
+  }
+  if (opts.repeat) {
     const since = new Date(now.getTime() - DUPLICATE_WINDOW_MIN * 60_000).toISOString();
     const recent = await db.findRecentByRawText(text, since);
     if (recent) return { type: 'saved', record: recent };
@@ -47,17 +51,32 @@ export async function intakeText(db: PocketDb, text: string, now: Date, opts: { 
 }
 
 /**
+ * Is this the same opening of a link coming back (not a new dictation)? Only the first read on load can be one —
+ * a reload or «back / forward» (`navigation.type`) — or a page restored from memory (`pageshow.persisted`).
+ * A `hashchange` (the Shortcut opened the link again in the open tab) is always new.
+ */
+export function isRepeatOpen(navigationType: string | undefined, persisted: boolean, onLoad: boolean): boolean {
+  if (persisted) return true;
+  return onLoad && (navigationType === 'reload' || navigationType === 'back_forward');
+}
+
+function navigationType(): string | undefined {
+  const entry = performance.getEntriesByType?.('navigation')[0] as PerformanceNavigationTiming | undefined;
+  return entry?.type;
+}
+
+/**
  * Reads `#t=` on load, `hashchange` and `pageshow`. The hash is removed synchronously (before any await), so a
  * second event for the same link finds nothing: the handler runs once per link.
  */
-export function installHashListeners(onText: (text: string) => void): void {
-  const consume = (): void => {
+export function installHashListeners(onText: (text: string, repeat: boolean) => void): void {
+  const consume = (repeat: boolean): void => {
     const text = extractHashText(window.location.hash);
     if (text === null) return;
     window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
-    if (text !== '') onText(text);
+    if (text !== '') onText(text, repeat);
   };
-  window.addEventListener('hashchange', consume);
-  window.addEventListener('pageshow', consume);
-  consume();
+  window.addEventListener('hashchange', () => consume(false));
+  window.addEventListener('pageshow', (e) => consume(isRepeatOpen(undefined, e.persisted, false)));
+  consume(isRepeatOpen(navigationType(), false, true));
 }

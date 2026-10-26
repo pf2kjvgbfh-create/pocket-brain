@@ -62,7 +62,7 @@ async function boot(): Promise<void> {
   renderSettings(screen('settings'), app, backup, model.panel);
   const newScreen = createNewScreen(app, screen('new'));
   const hasLink = extractHashText(window.location.hash) !== null;
-  installHashListeners((text) => void newScreen.openText(text, true));
+  installHashListeners((text, repeat) => void newScreen.openText(text, true, repeat));
   if (!hasLink) await newScreen.restoreDraft();
 }
 

@@ -35,14 +35,18 @@ export function findTimes(text: string, now: Date): FoundTime[] {
 
 const B = '(?<![\\p{L}\\d])';
 const E = '(?![\\p{L}\\d])';
-const DAY_RE = new RegExp(`${B}(\\d{1,2})(?:\\s*-?\\s*(?:ого|го)(?:\\s+числа)?|\\s+числа)${E}`, 'u');
+// «17-го (числа)», «17 числа», «5 число», «15-е число»; not «половину 5-го» (that is 4:30).
+const DAY_RE = new RegExp(
+  `(?<!половин\\p{L}*\\s+)${B}(\\d{1,2})(?:\\s*-?\\s*(?:ого|го)(?:\\s+числ\\p{L}*)?|\\s+числ\\p{L}*|-?е\\s+числ\\p{L}*)${E}`,
+  'u',
+);
 const CLOCK_RE = new RegExp(`${B}(?:в\\s+)?(\\d{1,2}):(\\d{2})${E}`, 'u');
 
 export interface FoundDay extends Span {
   day: number;
 }
 
-/** «17-го», «17-го числа», «17 числа» (after normalization «семнадцатого» is «17-го»). */
+/** «17-го», «17-го числа», «17 числа», «5 число» (after normalization «семнадцатого» / «пятое» is «17-го» / «5-го»). */
 export function findDayOfMonth(lower: string): FoundDay | null {
   const m = DAY_RE.exec(lower);
   if (!m) return null;

@@ -12,10 +12,15 @@ export interface DefaultWallet extends WalletRef {
   id: string;
 }
 
-/** Default wallets with their spoken aliases (stems, so every case form matches). */
+/** The «Вклад» wallet of stages 0–6: never matched by speech, removed by migration v2 when unused. */
+export const OLD_DEPOSIT_WALLET_ID = 'deposit';
+
+/**
+ * Default wallets with their spoken aliases (stems, so every case form matches). Stage 7: no «Вклад» wallet —
+ * the word «вклад» means the kind `deposit` (DECISIONS 2026-10-26 item 9).
+ */
 export const DEFAULT_WALLETS: DefaultWallet[] = [
   { id: 'cash', name: 'Наличные', aliases: ['наличн', 'наличк', 'налик'] },
-  { id: 'deposit', name: 'Вклад', aliases: ['вклад'] },
   { id: 'gold', name: 'Золотая карта', aliases: ['золот'] },
   { id: 'silver', name: 'Серебряная карта', aliases: ['серебрян'] },
   { id: 'tinkoff', name: 'Тинькофф', aliases: ['тиньк', 'тиньков', 'т-банк', 'тбанк'] },

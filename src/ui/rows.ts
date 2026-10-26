@@ -1,8 +1,9 @@
 // One tappable row per record, shared by «Дела», «Деньги» and «Мысли».
-import { formatRub } from '../money/format';
-import { subscriptionNextDue } from '../money/totals';
+import { formatMoney } from '../money/format';
+import { depositEnd, recordWhen, subscriptionNextDue } from '../money/totals';
 import type { RecordRow } from '../db/types';
 import { editRecord, type App } from './app';
+import { DIRECTIONS } from './card-model';
 import { h, timeEl } from './dom';
 
 const walletName = (app: App, id: string | null | undefined): string => app.wallets.find((w) => w.id === id)?.name ?? '';
@@ -20,9 +21,17 @@ function subLine(app: App, r: RecordRow): string {
       if (f.rate !== undefined) parts.push(`${String(f.rate).replace('.', ',')}%`);
       if (f.term_months !== undefined) parts.push(`${f.term_months} мес.`);
       break;
-    case 'deposit':
+    case 'deposit': {
       if (f.rate !== undefined) parts.push(`${String(f.rate).replace('.', ',')}%`);
-      if (f.term_months !== undefined) parts.push(`${f.term_months} мес.`);
+      const end = depositEnd(r);
+      if (end) parts.push(`до ${end}`);
+      if (r.wallet_id) parts.push(`с «${walletName(app, r.wallet_id)}»`);
+      break;
+    }
+    case 'debt':
+    case 'repay':
+      parts.push(DIRECTIONS[r.kind]?.find((d) => d.value === f.direction)?.label ?? '');
+      if (r.wallet_id) parts.push(walletName(app, r.wallet_id));
       break;
     case 'transfer':
       parts.push(`${walletName(app, r.wallet_id) || '?'} → ${walletName(app, f.to_wallet_id) || '?'}`);
@@ -37,19 +46,21 @@ function subLine(app: App, r: RecordRow): string {
     default:
       if (r.wallet_id) parts.push(walletName(app, r.wallet_id));
   }
+  if (f.currency) parts.push('в рублях не считается');
   return parts.filter(Boolean).join(' · ');
 }
 
 export function recordRow(app: App, r: RecordRow, opts: { showTime?: 'due' | 'created' | 'none' } = {}): HTMLElement {
   const mode = opts.showTime ?? 'none';
-  const title = r.kind === 'held' && r.fields.who ? r.fields.who : rowTitle(r);
+  const byPerson = r.kind === 'held' || r.kind === 'debt' || r.kind === 'repay';
+  const title = byPerson && r.fields.who ? r.fields.who : rowTitle(r);
   const sub = subLine(app, r);
   const side: HTMLElement[] = [];
-  if (r.fields.amount_minor !== undefined) side.push(h('span', { class: 'amount' }, formatRub(r.fields.amount_minor)));
+  if (r.fields.amount_minor !== undefined) side.push(h('span', { class: 'amount' }, formatMoney(r.fields.amount_minor, r.fields.currency)));
   if (mode === 'due') {
     const due = r.kind === 'subscription' ? subscriptionNextDue(r.fields, r.due_utc, app.now()) : r.due_utc;
     side.push(timeEl(due, app.now()));
-  } else if (mode === 'created') side.push(timeEl(r.created_utc, app.now()));
+  } else if (mode === 'created') side.push(timeEl(recordWhen(r), app.now())); // «вчера потратил»: the day it happened
   const btn = h(
     'button',
     { type: 'button', class: 'row', 'data-id': r.id, 'data-kind': r.kind },

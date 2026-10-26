@@ -1,0 +1,103 @@
+{
+  "now": "2026-10-22T09:00:00Z",
+  "note": "Stage 7 (docs/changes/2026-10-26-qa-fixes.md, section A): every phrase of the QA check plus the same nuances in other words. now = Thursday 12:00 MSK unless a phrase has its own `now`. Names and amounts are invented. Only keys present in `expected` are asserted; null = the key must be absent. `walletless` = no money moved, the record gets no wallet. An array = parseMany gives several records in this order; a single object = exactly one record.",
+  "phrases": [
+    { "text": "Маша должна мне 1500", "expected": { "kind": "debt", "who": "Маша", "amount_minor": 150000, "direction": "to_me", "walletless": true } },
+    { "text": "взял в долг у Пети 2000", "expected": { "kind": "debt", "who": "Петя", "amount_minor": 200000, "direction": "from_me", "walletless": null } },
+    { "text": "одолжил Пете 3000", "expected": { "kind": "debt", "who": "Петя", "amount_minor": 300000, "direction": "to_me", "walletless": null } },
+    { "text": "одолжила Сергею 2500 с тинькофф", "expected": { "kind": "debt", "who": "Сергей", "amount_minor": 250000, "direction": "to_me", "wallet": "Тинькофф" } },
+    { "text": "я должен Пете 500", "expected": { "kind": "debt", "who": "Петя", "amount_minor": 50000, "direction": "from_me", "walletless": true } },
+    { "text": "Оля должна мне две тысячи", "expected": { "kind": "debt", "who": "Оля", "amount_minor": 200000, "direction": "to_me", "walletless": true } },
+    { "text": "заняла у Игоря 4000", "expected": { "kind": "debt", "who": "Игорь", "amount_minor": 400000, "direction": "from_me" } },
+    { "text": "Денис одолжил мне 1000", "expected": { "kind": "debt", "who": "Денис", "amount_minor": 100000, "direction": "from_me", "walletless": null } },
+    { "text": "дал в долг брату 5 тыс", "expected": { "kind": "debt", "who": "Брат", "amount_minor": 500000, "direction": "to_me" } },
+    { "text": "взяла в долг у Ани тысячу", "expected": { "kind": "debt", "who": "Аня", "amount_minor": 100000, "direction": "from_me" } },
+
+    { "text": "вернул Ивану 2000", "expected": { "kind": "repay", "who": "Иван", "amount_minor": 200000, "direction": "by_me" } },
+    { "text": "отдал Ивану 5000 его деньги", "expected": { "kind": "repay", "who": "Иван", "amount_minor": 500000, "direction": "by_me" } },
+    { "text": "Петя вернул мне 3000", "expected": { "kind": "repay", "who": "Петя", "amount_minor": 300000, "direction": "to_me" } },
+    { "text": "вернула Ольге 1500", "expected": { "kind": "repay", "who": "Ольга", "amount_minor": 150000, "direction": "by_me" } },
+    { "text": "отдал долг Сергею 700", "expected": { "kind": "repay", "who": "Сергей", "amount_minor": 70000, "direction": "by_me" } },
+    { "text": "Даша вернула мне долг 1200", "expected": { "kind": "repay", "who": "Даша", "amount_minor": 120000, "direction": "to_me" } },
+    { "text": "отдала Тане её деньги 3000", "expected": { "kind": "repay", "who": "Таня", "amount_minor": 300000, "direction": "by_me" } },
+
+    { "text": "двадцать пять тысяч за аренду", "expected": { "kind": "expense", "amount_minor": 2500000, "title": "аренду" } },
+    { "text": "пять тысяч бензин", "expected": { "kind": "expense", "amount_minor": 500000, "title": "бензин" } },
+    { "text": "тысяча двести за кроссовки", "expected": { "kind": "expense", "amount_minor": 120000, "title": "кроссовки" } },
+    { "text": "1.5 тысячи такси", "expected": { "kind": "expense", "amount_minor": 150000, "title": "такси" } },
+    { "text": "3,5 тысячи парковка", "expected": { "kind": "expense", "amount_minor": 350000, "title": "парковка" } },
+    { "text": "5к такси", "expected": { "kind": "expense", "amount_minor": 500000, "title": "такси" } },
+    { "text": "5 тыс обед", "expected": { "kind": "expense", "amount_minor": 500000, "title": "обед" } },
+    { "text": "десять тыщ ремонт", "expected": { "kind": "expense", "amount_minor": 1000000, "title": "ремонт" } },
+    { "text": "полторы тысячи стрижка", "expected": { "kind": "expense", "amount_minor": 150000, "title": "стрижка" } },
+    { "text": "2,5к продукты", "expected": { "kind": "expense", "amount_minor": 250000, "title": "продукты" } },
+    { "text": "три тысячи пятьсот за свет", "expected": { "kind": "expense", "amount_minor": 350000, "title": "свет" } },
+
+    { "text": "купил кофе за 300 и круассан за 250", "expected": [
+      { "kind": "expense", "amount_minor": 30000, "title": "кофе" },
+      { "kind": "expense", "amount_minor": 25000, "title": "круассан" }
+    ] },
+    { "text": "потратил 300 на кофе, 500 на такси", "expected": [
+      { "kind": "expense", "amount_minor": 30000, "title": "кофе" },
+      { "kind": "expense", "amount_minor": 50000, "title": "такси" }
+    ] },
+    { "text": "кофе 200, булочка 150 и сок 120", "expected": [
+      { "kind": "expense", "amount_minor": 20000, "title": "кофе" },
+      { "kind": "expense", "amount_minor": 15000, "title": "булочка" },
+      { "kind": "expense", "amount_minor": 12000, "title": "сок" }
+    ] },
+    { "text": "оплатила свет 1800 и воду 900 с золотой карты", "expected": [
+      { "kind": "expense", "amount_minor": 180000, "title": "свет", "wallet": "Золотая карта" },
+      { "kind": "expense", "amount_minor": 90000, "title": "воду", "wallet": "Золотая карта" }
+    ] },
+
+    { "text": "снял 5000 с золотой", "expected": { "kind": "transfer", "amount_minor": 500000, "wallet": "Золотая карта", "to_wallet": "Наличные" } },
+    { "text": "сняла 3000 с тинькофф", "expected": { "kind": "transfer", "amount_minor": 300000, "wallet": "Тинькофф", "to_wallet": "Наличные" } },
+    { "text": "кинули на тинькофф 700", "expected": { "kind": "income", "amount_minor": 70000, "wallet": "Тинькофф" } },
+    { "text": "перевели на золотую 1200", "expected": { "kind": "income", "amount_minor": 120000, "wallet": "Золотая карта" } },
+    { "text": "положил на серебряную 1000", "expected": { "kind": "income", "amount_minor": 100000, "wallet": "Серебряная карта" } },
+    { "text": "закинула на серебряную 800", "expected": { "kind": "income", "amount_minor": 80000, "wallet": "Серебряная карта" } },
+    { "text": "положил на серебряную 1000 с наличных", "expected": { "kind": "transfer", "amount_minor": 100000, "wallet": "Наличные", "to_wallet": "Серебряная карта" } },
+
+    { "text": "положил 50000 на вклад", "expected": { "kind": "deposit", "amount_minor": 5000000, "wallet": null } },
+    { "text": "положила 80000 на вклад с тинькофф на 6 месяцев", "expected": { "kind": "deposit", "amount_minor": 8000000, "wallet": "Тинькофф", "term_months": 6 } },
+
+    { "text": "напомни сегодня в 3 ночи проверить", "now": "2026-10-22T01:30:00Z", "expected": { "kind": "reminder", "title": "проверить", "due_utc": "2026-10-23T00:00:00.000Z", "no_time": null } },
+    { "text": "напомни в 2 ночи выключить котёл", "now": "2026-10-22T01:30:00Z", "expected": { "kind": "reminder", "title": "выключить котёл", "due_utc": "2026-10-22T23:00:00.000Z" } },
+    { "text": "напомни в 7 вечера позвонить", "now": "2026-10-22T01:30:00Z", "expected": { "kind": "reminder", "title": "позвонить", "due_utc": "2026-10-22T16:00:00.000Z" } },
+    { "text": "напомни в 10 утра забрать ключи", "now": "2026-10-22T01:30:00Z", "expected": { "kind": "reminder", "title": "забрать ключи", "due_utc": "2026-10-22T07:00:00.000Z" } },
+    { "text": "напомни сегодня в 11 вечера закрыть окно", "now": "2026-10-22T01:30:00Z", "expected": { "kind": "reminder", "title": "закрыть окно", "due_utc": "2026-10-22T20:00:00.000Z" } },
+
+    { "text": "напомни во вторник в половину пятого забрать посылку", "expected": { "kind": "reminder", "title": "забрать посылку", "due_utc": "2026-10-27T13:30:00.000Z" } },
+    { "text": "напомни в субботу в 10 утра помыть машину", "expected": { "kind": "reminder", "title": "помыть машину", "due_utc": "2026-10-24T07:00:00.000Z" } },
+    { "text": "напомни 28 марта в 3 часа ночи посмотреть затмение", "expected": { "kind": "reminder", "title": "посмотреть затмение", "due_utc": "2027-03-28T00:00:00.000Z" } },
+    { "text": "напомни в понедельник утром позвонить", "expected": { "kind": "reminder", "title": "позвонить", "due_utc": "2026-10-26T06:00:00.000Z", "no_time": null } },
+    { "text": "напомни завтра днём забрать справку", "expected": { "kind": "reminder", "title": "забрать справку", "due_utc": "2026-10-23T10:00:00.000Z" } },
+    { "text": "напомни в пятницу вечером купить торт", "expected": { "kind": "reminder", "title": "купить торт", "due_utc": "2026-10-23T16:00:00.000Z" } },
+    { "text": "напомни в половину восьмого вечера позвонить бабушке", "expected": { "kind": "reminder", "title": "позвонить бабушке", "due_utc": "2026-10-22T16:30:00.000Z" } },
+    { "text": "напомни завтра в половину десятого утра отправить письмо", "expected": { "kind": "reminder", "title": "отправить письмо", "due_utc": "2026-10-23T06:30:00.000Z" } },
+    { "text": "напомни завтра в 5 забрать сына", "expected": { "kind": "reminder", "title": "забрать сына", "due_utc": "2026-10-23T14:00:00.000Z" } },
+    { "text": "напомни завтра в 2 дня позвонить в банк", "expected": { "kind": "reminder", "title": "позвонить в банк", "due_utc": "2026-10-23T11:00:00.000Z" } },
+
+    { "text": "напомни через 3 дня позвонить", "expected": { "kind": "reminder", "title": "позвонить", "due_utc": "2026-10-25T09:00:00.000Z", "no_time": true } },
+    { "text": "напомни 5 ноября оплатить налог", "expected": { "kind": "reminder", "title": "оплатить налог", "due_utc": "2026-11-05T09:00:00.000Z", "no_time": true } },
+    { "text": "напомни завтра купить хлеб", "expected": { "kind": "reminder", "title": "купить хлеб", "due_utc": "2026-10-23T09:00:00.000Z", "no_time": true } },
+    { "text": "напомни в субботу отвезти шины", "expected": { "kind": "reminder", "title": "отвезти шины", "due_utc": "2026-10-24T09:00:00.000Z", "no_time": true } },
+    { "text": "напомни завтра в 19:00 позвонить маме", "expected": { "kind": "reminder", "title": "позвонить маме", "due_utc": "2026-10-23T16:00:00.000Z", "no_time": null } },
+
+    { "text": "нетфликс 799 каждое 5 число", "expected": { "kind": "subscription", "title": "нетфликс", "amount_minor": 79900, "day": 5, "due_utc": "2026-11-05T09:00:00.000Z" } },
+    { "text": "музыка 199 каждое пятое число", "expected": { "kind": "subscription", "title": "музыка", "amount_minor": 19900, "day": 5 } },
+    { "text": "спортзал 3000 каждое 15-е число", "expected": { "kind": "subscription", "title": "спортзал", "amount_minor": 300000, "day": 15 } },
+
+    { "text": "100 долларов", "expected": { "kind": "expense", "amount_minor": 10000, "currency": "USD" } },
+    { "text": "20 евро", "expected": { "kind": "expense", "amount_minor": 2000, "currency": "EUR" } },
+    { "text": "купил кроссовки за 50 долларов", "expected": { "kind": "expense", "amount_minor": 5000, "currency": "USD", "title": "кроссовки" } },
+    { "text": "обед 15 евро", "expected": { "kind": "expense", "amount_minor": 1500, "currency": "EUR", "title": "обед" } },
+    { "text": "89 рублей 50 копеек", "expected": { "kind": "expense", "amount_minor": 8950, "currency": null } },
+    { "text": "хлеб 45 рублей 90 копеек", "expected": { "kind": "expense", "amount_minor": 4590, "title": "хлеб" } },
+    { "text": "вчера потратил 500", "expected": { "kind": "expense", "amount_minor": 50000, "happened_utc": "2026-10-21T09:00:00.000Z", "due_utc": null } },
+    { "text": "вчера потратил 500 на продукты", "expected": { "kind": "expense", "amount_minor": 50000, "title": "продукты", "happened_utc": "2026-10-21T09:00:00.000Z" } },
+    { "text": "вчера в 15:00 купил цветы за 2000", "expected": { "kind": "expense", "amount_minor": 200000, "title": "цветы", "happened_utc": "2026-10-21T12:00:00.000Z" } },
+    { "text": "позавчера заплатила 1200 за интернет", "expected": { "kind": "expense", "amount_minor": 120000, "title": "интернет", "happened_utc": "2026-10-20T09:00:00.000Z" } }
+  ]
+}

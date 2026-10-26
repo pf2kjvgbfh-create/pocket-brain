@@ -3,8 +3,10 @@
 import type { DraftRow, RecordRow, WalletRow } from '../db/types';
 import { walletIdByName, walletRefs } from '../db/wallets';
 import { needsModel } from '../parser/confidence';
-import { parse } from '../parser/index';
+import { parseMany } from '../parser/index';
 import { applyLearned, type Learned } from '../parser/learned';
+import { personKey } from '../parser/names';
+import type { ParseResult } from '../parser/types';
 import { KIND_FIELDS, recordFromState, stateFromParse } from './card-model';
 
 /** The last used wallet, else «Наличные», else the first visible wallet; a hidden or missing wallet is skipped. */
@@ -19,6 +21,8 @@ export interface AutoInput {
   lastWalletId: string | null | undefined;
   learned: Learned;
   now: Date;
+  /** Live records: «вернул Ивану его деньги» moves no wallet when Ivan's money was only kept (held). */
+  records?: RecordRow[];
 }
 
 export interface AutoResult {
@@ -27,17 +31,53 @@ export interface AutoResult {
   namedWalletId: string | null;
 }
 
+export interface AutoResults {
+  /** One per amount («кофе 300 и круассан 250» → 2); ids `draft.id`, `draft.id-2`, … */
+  records: RecordRow[];
+  namedWalletId: string | null;
+}
+
+/** Record id of part `i` of a phrase: the first keeps the draft id (so a retry is still an upsert). */
+export const partId = (draftId: string, i: number): string => (i === 0 ? draftId : `${draftId}-${i + 1}`);
+
+/**
+ * DECISIONS item 2: returning money that was only kept («чужие деньги») takes nothing from a wallet. So a «by_me»
+ * return to someone who has held money with me and no «I owe» debt gets no wallet.
+ */
+function returnsHeldMoney(result: ParseResult, records: RecordRow[]): boolean {
+  if (result.kind !== 'repay' || result.fields.direction !== 'by_me' || !result.fields.who) return false;
+  const key = personKey(result.fields.who);
+  const mine = records.filter((r) => !r.deleted && personKey(r.fields.who) === key);
+  return mine.some((r) => r.kind === 'held') && !mine.some((r) => r.kind === 'debt' && r.fields.direction === 'from_me');
+}
+
 /** Wallet order: named in the phrase > learned > last used > cash. For a transfer only the source gets a default. */
-export function buildAutoRecord({ draft, wallets, lastWalletId, learned, now }: AutoInput): AutoResult {
-  const parsed = parse(draft.text, new Date(draft.created_utc), walletRefs(wallets));
-  const result = applyLearned(parsed, learned, wallets);
-  const state = stateFromParse(draft.id, result, wallets);
+function buildOne(parsed: ParseResult, id: string, input: AutoInput, split: boolean): RecordRow {
+  const { draft, wallets, lastWalletId, learned, now } = input;
+  let result = applyLearned(parsed, learned, wallets);
+  // «Маша должна мне 1500» moved no money: no wallet at all, not even a learned one.
+  const walletless = (parsed.walletless && result.kind === parsed.kind) || returnsHeldMoney(result, input.records ?? []);
+  if (walletless) result = { ...result, fields: { ...result.fields, wallet: undefined } };
+  const state = stateFromParse(id, result, wallets);
   state.createdUtc = draft.created_utc;
-  const hasWallet = KIND_FIELDS[result.kind].includes('wallet');
-  if (hasWallet && !state.walletId) state.walletId = defaultWalletId(wallets, lastWalletId) ?? '';
+  if (!walletless && KIND_FIELDS[result.kind].includes('wallet') && !state.walletId) {
+    state.walletId = defaultWalletId(wallets, lastWalletId) ?? '';
+  }
   const record = recordFromState(state, now);
-  return {
-    record: needsModel(result) ? { ...record, refine: 'pending' } : record,
-    namedWalletId: hasWallet ? walletIdByName(wallets, parsed.fields.wallet) : null,
-  };
+  // A part of a split phrase is never sent to the model: it would re-read the WHOLE phrase as one record.
+  return needsModel(result) && !split ? { ...record, refine: 'pending' } : record;
+}
+
+export function buildAutoRecords(input: AutoInput): AutoResults {
+  const { draft, wallets } = input;
+  const parts = parseMany(draft.text, new Date(draft.created_utc), walletRefs(wallets));
+  const records = parts.map((p, i) => buildOne(p, partId(draft.id, i), input, parts.length > 1));
+  const named = parts.find((p) => KIND_FIELDS[p.kind].includes('wallet') && p.fields.wallet);
+  return { records, namedWalletId: named ? walletIdByName(wallets, named.fields.wallet) : null };
+}
+
+/** One record (the first part): kept for callers and tests that think in single phrases. */
+export function buildAutoRecord(input: AutoInput): AutoResult {
+  const { records, namedWalletId } = buildAutoRecords(input);
+  return { record: records[0], namedWalletId };
 }

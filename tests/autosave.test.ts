@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_WALLETS } from '../src/config';
-import type { DraftRow, WalletRow } from '../src/db/types';
+import type { DraftRow, RecordRow, WalletRow } from '../src/db/types';
 import type { Learned } from '../src/parser/learned';
-import { alreadySentence, savedSentence } from '../src/ui/card-model';
-import { buildAutoRecord, defaultWalletId } from '../src/ui/autosave';
+import { alreadySentence, savedManySentence, savedSentence } from '../src/ui/card-model';
+import { buildAutoRecord, buildAutoRecords, defaultWalletId, partId } from '../src/ui/autosave';
 
 const NOW = new Date('2026-10-22T09:00:00Z'); // 12:00 MSK
 const wallets: WalletRow[] = DEFAULT_WALLETS.map((w) => ({ id: w.id, name: w.name, hidden: false, start_balance_minor: 0 }));
@@ -38,14 +38,14 @@ describe('buildAutoRecord', () => {
   it('the last wallet is missing or hidden: cash, then the first visible wallet', () => {
     expect(build('купил воду за 500', { lastWalletId: 'nope' }).record.wallet_id).toBe('cash');
     expect(build('купил воду за 500', { lastWalletId: 'gold', wallets: hide('gold') }).record.wallet_id).toBe('cash');
-    expect(build('купил воду за 500', { lastWalletId: 'gold', wallets: hide('gold', 'cash') }).record.wallet_id).toBe('deposit');
-    expect(defaultWalletId(hide('cash', 'deposit', 'gold', 'silver', 'tinkoff'), 'gold')).toBeNull();
+    expect(build('купил воду за 500', { lastWalletId: 'gold', wallets: hide('gold', 'cash') }).record.wallet_id).toBe('silver');
+    expect(defaultWalletId(hide('cash', 'gold', 'silver', 'tinkoff'), 'gold')).toBeNull();
   });
 
-  it('a hidden wallet named in the phrase is still used and remembered', () => {
-    const { record, namedWalletId } = build('купил воду за 500 золотая карта', { wallets: hide('gold') });
-    expect(record.wallet_id).toBe('gold');
-    expect(namedWalletId).toBe('gold');
+  it('a hidden wallet named in the phrase is not recognised (stage 7): the default wallet, nothing remembered', () => {
+    const { record, namedWalletId } = build('купил воду за 500 золотая карта', { wallets: hide('gold'), lastWalletId: 'silver' });
+    expect(record.wallet_id).toBe('silver');
+    expect(namedWalletId).toBeNull();
   });
 
   it('learned wallet beats the last wallet; a named wallet beats both', () => {
@@ -113,5 +113,49 @@ describe('buildAutoRecord', () => {
     const { record } = buildAutoRecord({ draft: d, wallets, lastWalletId: null, learned: {}, now: NOW });
     expect(record.created_utc).toBe('2026-10-22T08:00:00.000Z');
     expect(record.updated_utc).toBe(NOW.toISOString());
+  });
+});
+
+describe('stage 7: several records, debts, currency and past days', () => {
+  const many = (text: string, over: { lastWalletId?: string | null; records?: RecordRow[] } = {}) =>
+    buildAutoRecords({ draft: draft(text), wallets, lastWalletId: over.lastWalletId ?? 'silver', learned: {}, now: NOW, records: over.records });
+
+  it('one phrase with two amounts → two records with ids d1 and d1-2, one creation time, never sent to the model', () => {
+    const { records } = many('кофе 300 и круассан 250');
+    expect(records.map((r) => [r.id, r.kind, r.fields.amount_minor, r.wallet_id])).toEqual([
+      ['d1', 'expense', 30000, 'silver'],
+      ['d1-2', 'expense', 25000, 'silver'],
+    ]);
+    expect(records.every((r) => r.created_utc === NOW.toISOString() && r.refine === undefined)).toBe(true);
+    expect(partId('d1', 0)).toBe('d1');
+    expect(partId('d1', 2)).toBe('d1-3');
+    expect(norm(savedManySentence(records, wallets, NOW))).toMatch(/^Записал 2 записи: /);
+  });
+
+  it('a debt that is only a fact gets no wallet, not even the last one; a lent one moves the last wallet', () => {
+    const fact = many('Маша должна мне 1500').records[0];
+    expect(fact).toMatchObject({ kind: 'debt', wallet_id: null });
+    expect(fact.fields).toMatchObject({ who: 'Маша', amount_minor: 150000, direction: 'to_me' });
+    expect(many('одолжил Пете 3000').records[0]).toMatchObject({ kind: 'debt', wallet_id: 'silver' });
+  });
+
+  it('returning money that was only kept («чужие деньги») takes nothing from a wallet; returning a debt does', () => {
+    const held: RecordRow = {
+      id: 'h', kind: 'held', raw_text: 'x', fields: { who: 'Иван', amount_minor: 500000 }, wallet_id: null, due_utc: null,
+      created_utc: NOW.toISOString(), updated_utc: NOW.toISOString(), deleted: false,
+    };
+    const text = 'отдал Ивану 5000 его деньги';
+    expect(many(text, { records: [held] }).records[0]).toMatchObject({ kind: 'repay', wallet_id: null });
+    const owe = { ...held, id: 'o', kind: 'debt' as const, fields: { who: 'Иван', amount_minor: 500000, direction: 'from_me' as const } };
+    expect(many(text, { records: [held, owe] }).records[0]).toMatchObject({ kind: 'repay', wallet_id: 'silver' });
+    expect(many(text).records[0]).toMatchObject({ kind: 'repay', wallet_id: 'silver' });
+  });
+
+  it('currency and the day it happened are carried into the record; no due time for a past expense', () => {
+    const usd = many('потратил 100 долларов на сувениры').records[0];
+    expect(usd.fields.currency).toBe('USD');
+    const past = many('вчера потратил 500 на такси').records[0];
+    expect(past.fields.happened_utc).toBe('2026-10-21T09:00:00.000Z');
+    expect(past.due_utc).toBeNull();
   });
 });

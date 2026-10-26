@@ -1,7 +1,7 @@
 // The card «Понял так»: shown instantly from the rules parser, every field editable, «Сохранить» always enabled.
 import type { RecordRow, WalletRow } from '../db/types';
 import { fromMskInput } from '../time/format';
-import { KINDS, KIND_FIELDS, KIND_LABEL, recordFromState, understoodSentence, type CardState, type FieldName } from './card-model';
+import { DIRECTIONS, KINDS, KIND_FIELDS, KIND_LABEL, recordFromState, understoodSentence, type CardState, type FieldName } from './card-model';
 import type { Kind } from '../db/types';
 import { h, timeEl } from './dom';
 import { remindBlock } from './remind';
@@ -27,7 +27,8 @@ const LABELS: Record<FieldName, string> = {
   wallet: 'Кошелёк',
   toWallet: 'Куда (кошелёк)',
   due: 'Когда (МСК)',
-  who: 'Чьи деньги',
+  who: 'Кто',
+  direction: 'Кто кому',
   rate: 'Ставка, %',
   term: 'Срок, месяцев',
   day: 'День месяца',
@@ -101,6 +102,18 @@ export function renderCard(opts: CardOptions): HTMLElement {
       }
       case 'who':
         return textInput(state, 'who', 'who', changed);
+      case 'direction': {
+        const sel = h('select', { 'data-field': 'direction' });
+        const choices = DIRECTIONS[state.kind] ?? [];
+        for (const d of choices) sel.append(h('option', { value: d.value }, d.label));
+        sel.value = choices.some((d) => d.value === state.direction) ? state.direction : (choices[0]?.value ?? '');
+        state.direction = sel.value as CardState['direction'];
+        sel.addEventListener('change', () => {
+          state.direction = sel.value as CardState['direction'];
+          changed();
+        });
+        return sel;
+      }
       case 'rate':
         return textInput(state, 'rate', 'rate', changed, { inputmode: 'decimal' });
       case 'term':

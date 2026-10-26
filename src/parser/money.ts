@@ -1,5 +1,5 @@
 // Amounts (→ integer kopecks), interest rates (%) and terms (months). Works on the folded, normalized text.
-import type { Span } from './types';
+import type { Currency, Span } from './types';
 
 const B = '(?<![\\p{L}\\d])';
 const E = '(?![\\p{L}\\d])';
@@ -35,19 +35,36 @@ export function findTerm(lower: string): FoundValue | null {
   return { value: months, ...span };
 }
 
-/** Spans that contain numbers which are NOT money: clock times, relative times, day of month, hours of day. */
+const MONTHS = 'январ|феврал|март|апрел|ма[йя]|июн|июл|август|сентябр|октябр|ноябр|декабр';
+
+/** Spans that contain numbers which are NOT money: clock times, relative times, day of month, hours of day, dates. */
 const NOT_MONEY_RES: RegExp[] = [
   new RegExp(`${B}\\d{1,2}:\\d{2}${E}`, 'gu'),
   new RegExp(`${B}через\\s+\\d+(?:[.,]\\d+)?\\s+\\p{L}+`, 'gu'),
-  new RegExp(`${B}\\d{1,2}(?:\\s*-?\\s*(?:ого|го)|\\s+числа)${E}`, 'gu'),
-  new RegExp(`${B}в\\s+\\d{1,2}\\s+(?:утра|вечера|дня|ночи)${E}`, 'gu'),
+  new RegExp(`${B}\\d{1,2}(?:\\s*-?\\s*(?:ого|го)|\\s+числ\\p{L}*|-?е\\s+числ\\p{L}*)${E}`, 'gu'),
+  new RegExp(`${B}(?:в\\s+)?\\d{1,2}(?:\\s+час(?:а|ов)?)?\\s+(?:утра|вечера|дня|ночи)${E}`, 'gu'),
+  new RegExp(`${B}\\d{1,2}\\s+час(?:а|ов)?${E}`, 'gu'),
+  new RegExp(`${B}\\d{1,2}\\s+(?:${MONTHS})\\p{L}*`, 'gu'),
 ];
 
-const AMOUNT_RE = new RegExp(`(?<![\\p{L}\\d.,])${NUM}(?:\\s*(руб\\p{L}*|р\\.|р${E}|₽))?`, 'gu');
+// A currency word may follow the number; rubles may be followed by kopecks («89 рублей 50 копеек»).
+const CURRENCY = `руб\\p{L}*|р\\.|р${E}|₽|доллар\\p{L}*|бакс\\p{L}*|\\$|евро${E}|€`;
+const AMOUNT_RE = new RegExp(
+  `(?<![\\p{L}\\d.,])${NUM}(?:\\s*(${CURRENCY})(?:\\s+(\\d{1,2})\\s+коп\\p{L}*)?)?`,
+  'gu',
+);
 
 export interface FoundAmount extends Span {
   minor: number;
   hasCurrency: boolean;
+  /** Dollars / euros; rubles have none. */
+  currency?: Currency;
+}
+
+function currencyOf(word: string): Currency | undefined {
+  if (/^(?:доллар|бакс|\$)/u.test(word)) return 'USD';
+  if (/^(?:евро|€)/u.test(word)) return 'EUR';
+  return undefined;
 }
 
 function mask(text: string, spans: Span[]): string {
@@ -56,9 +73,8 @@ function mask(text: string, spans: Span[]): string {
   return out;
 }
 
-/** The money amount: the first number with a currency word, otherwise the first number left
- *  after rates, terms, times and days are masked out. */
-export function findAmount(lower: string): FoundAmount | null {
+/** Every number that can be money, in text order, after rates, terms, times, days and dates are masked out. */
+export function findAmounts(lower: string): FoundAmount[] {
   const skip: Span[] = [];
   const rate = findRate(lower);
   if (rate) skip.push(rate);
@@ -68,16 +84,17 @@ export function findAmount(lower: string): FoundAmount | null {
     for (const m of lower.matchAll(re)) skip.push({ start: m.index, end: m.index + m[0].length });
   }
   const masked = mask(lower, skip);
-  let first: FoundAmount | null = null;
-  for (const m of masked.matchAll(AMOUNT_RE)) {
-    const found: FoundAmount = {
-      minor: Math.round(toNumber(m[1]) * 100),
-      hasCurrency: m[2] !== undefined,
-      start: m.index,
-      end: m.index + m[0].length,
-    };
-    if (found.hasCurrency) return found;
-    first ??= found;
-  }
-  return first;
+  return [...masked.matchAll(AMOUNT_RE)].map((m) => ({
+    minor: Math.round(toNumber(m[1]) * 100) + (m[3] ? Number(m[3]) : 0),
+    hasCurrency: m[2] !== undefined,
+    currency: m[2] ? currencyOf(m[2]) : undefined,
+    start: m.index,
+    end: m.index + m[0].length,
+  }));
+}
+
+/** The money amount: the first number with a currency word, otherwise the first number. */
+export function findAmount(lower: string): FoundAmount | null {
+  const all = findAmounts(lower);
+  return all.find((a) => a.hasCurrency) ?? all[0] ?? null;
 }

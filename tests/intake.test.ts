@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import { PocketDb } from '../src/db/db';
-import { extractHashText, intakeText } from '../src/ui/intake';
+import { extractHashText, intakeText, isRepeatOpen } from '../src/ui/intake';
 import { KIND_FIELDS, recordFromState, stateFromParse, stateFromRecord, understoodSentence } from '../src/ui/card-model';
 import { walletRefs } from '../src/db/wallets';
 import { parse } from '../src/parser/index';
@@ -29,32 +29,51 @@ describe('extractHashText', () => {
 describe('intakeText', () => {
   it('the same link twice reuses the pending draft (one draft)', async () => {
     const db = await open();
-    const a = await intakeText(db, 'привет', NOW, { dedupe: true });
-    const b = await intakeText(db, 'привет', NOW, { dedupe: true });
+    const a = await intakeText(db, 'привет', NOW, { link: true, repeat: false });
+    const b = await intakeText(db, 'привет', NOW, { link: true, repeat: false });
     expect(a.type).toBe('draft');
     expect(b.type).toBe('draft');
     if (a.type === 'draft' && b.type === 'draft') expect(b.draft.id).toBe(a.draft.id);
     expect(await db.listDrafts()).toHaveLength(1);
   });
 
-  it('a record with the same raw text saved in the last 10 minutes is shown as already saved', async () => {
+  it('a REPEATED opening (reload / back): a record with the same raw text from the last 10 minutes is «already saved»', async () => {
     const db = await open();
-    const a = await intakeText(db, 'привет', NOW, { dedupe: true });
+    const a = await intakeText(db, 'привет', NOW, { link: true, repeat: false });
     if (a.type !== 'draft') throw new Error('draft expected');
     const rec = recordFromState(stateFromParse(a.draft.id, parse('привет', NOW, []), []), NOW);
     await db.saveFromDraft(rec, a.draft.id);
-    const again = await intakeText(db, 'привет', new Date(NOW.getTime() + 5 * 60_000), { dedupe: true });
+    const again = await intakeText(db, 'привет', new Date(NOW.getTime() + 5 * 60_000), { link: true, repeat: true });
     expect(again.type).toBe('saved');
     expect(await db.listDrafts()).toHaveLength(0);
-    // 11 minutes later it is a new draft.
-    const later = await intakeText(db, 'привет', new Date(NOW.getTime() + 11 * 60_000), { dedupe: true });
+    // 11 minutes later even a repeat is a new draft.
+    const later = await intakeText(db, 'привет', new Date(NOW.getTime() + 11 * 60_000), { link: true, repeat: true });
     expect(later.type).toBe('draft');
   });
 
-  it('typed text (no dedupe) always makes a new draft', async () => {
+  it('a FRESH link with a phrase saved a minute ago is a new dictation: a new draft (DECISIONS item 11)', async () => {
     const db = await open();
-    const a = await intakeText(db, 'раз', NOW, { dedupe: false });
-    const b = await intakeText(db, 'раз', NOW, { dedupe: false });
+    const a = await intakeText(db, 'кофе 200', NOW, { link: true, repeat: false });
+    if (a.type !== 'draft') throw new Error('draft expected');
+    await db.saveFromDraft(recordFromState(stateFromParse(a.draft.id, parse('кофе 200', NOW, []), []), NOW), a.draft.id);
+    const b = await intakeText(db, 'кофе 200', new Date(NOW.getTime() + 60_000), { link: true, repeat: false });
+    expect(b.type).toBe('draft');
+    if (b.type === 'draft') expect(b.draft.id).not.toBe(a.draft.id);
+  });
+
+  it('only the first read on a reload / back-forward, or a page restored from memory, is a repeat', () => {
+    expect(isRepeatOpen('reload', false, true)).toBe(true);
+    expect(isRepeatOpen('back_forward', false, true)).toBe(true);
+    expect(isRepeatOpen('navigate', false, true)).toBe(false);
+    expect(isRepeatOpen(undefined, false, true)).toBe(false);
+    expect(isRepeatOpen('reload', false, false)).toBe(false); // a later hashchange in a reloaded tab is new
+    expect(isRepeatOpen(undefined, true, false)).toBe(true); // pageshow.persisted
+  });
+
+  it('typed text always makes a new draft', async () => {
+    const db = await open();
+    const a = await intakeText(db, 'раз', NOW, { link: false, repeat: false });
+    const b = await intakeText(db, 'раз', NOW, { link: false, repeat: false });
     if (a.type === 'draft' && b.type === 'draft') expect(a.draft.id).not.toBe(b.draft.id);
     expect(await db.listDrafts()).toHaveLength(2);
   });
@@ -115,7 +134,9 @@ describe('card model', () => {
 
   it('a hidden wallet id is kept when the card is re-saved', () => {
     const p = parse('потратил 100 рублей наличными', NOW, refs);
-    const rec = recordFromState(stateFromParse('id5', p, wallets), NOW);
+    // Stage 7: speech no longer finds a hidden wallet (DECISIONS item 10), so the id comes from an edit / an old record.
+    expect(p.fields.wallet).toBeUndefined();
+    const rec = recordFromState({ ...stateFromParse('id5', p, wallets), walletId: 'cash' }, NOW);
     expect(rec.wallet_id).toBe('cash');
     const again = recordFromState(stateFromRecord(rec), NOW);
     expect(again.wallet_id).toBe('cash');

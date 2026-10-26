@@ -36,8 +36,9 @@ describe('fixture phrases.ru.json', () => {
     for (const p of fixture.phrases) counts[p.expected.kind] = (counts[p.expected.kind] ?? 0) + 1;
     expect(fixture.phrases).toHaveLength(50);
     expect(counts).toEqual({
-      reminder: 10, expense: 9, income: 4, transfer: 3,
-      held: 6, deposit: 5, subscription: 6, idea: 7,
+      // Stage 7 (DECISIONS item 9): «… на вклад» is a deposit now, not a transfer to a «Вклад» wallet.
+      reminder: 10, expense: 9, income: 4, transfer: 2,
+      held: 6, deposit: 6, subscription: 6, idea: 7,
     });
   });
 

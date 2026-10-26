@@ -1,5 +1,6 @@
-// Wallet list for the parser: visible AND hidden wallets with their CURRENT names + spoken aliases.
-import { DEFAULT_WALLETS, type WalletRef } from '../config';
+// Wallet list for the parser: VISIBLE wallets with their CURRENT names + spoken aliases. A hidden wallet is not
+// recognised in speech any more (stage 7), and the old «Вклад» wallet never is: «вклад» is the kind `deposit`.
+import { DEFAULT_WALLETS, OLD_DEPOSIT_WALLET_ID, type WalletRef } from '../config';
 import type { WalletRow } from './types';
 
 const defaultsById = new Map(DEFAULT_WALLETS.map((w) => [w.id, w]));
@@ -9,7 +10,7 @@ const defaultsById = new Map(DEFAULT_WALLETS.map((w) => [w.id, w]));
  * A custom wallet has no aliases: the parser matches its name.
  */
 export function walletRefs(wallets: WalletRow[]): WalletRef[] {
-  return wallets.map((w) => {
+  return wallets.filter((w) => !w.hidden && w.id !== OLD_DEPOSIT_WALLET_ID).map((w) => {
     const def = defaultsById.get(w.id);
     if (!def) return { name: w.name };
     const aliases = [...(def.aliases ?? [])];

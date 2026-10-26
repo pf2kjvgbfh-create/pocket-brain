@@ -1,6 +1,7 @@
 // «Are the rules unsure?» The flag only marks a record for the local model (stage 5); nothing is shown for it.
 import type { Kind, ParseResult } from './types';
 
+// debt / repay are never sent to the model (it only knows the 8 older kinds), so they are never «unsure».
 const MONEY_KINDS: readonly Kind[] = ['expense', 'income', 'transfer', 'held', 'deposit', 'subscription'];
 
 /** Below this the parser fell back to an idea because nothing matched (see ParseResult.confidence). */

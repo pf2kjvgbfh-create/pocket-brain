@@ -8,7 +8,15 @@ export type Kind =
   | 'held'
   | 'deposit'
   | 'subscription'
+  | 'debt'
+  | 'repay'
   | 'idea';
+
+/** debt: `to_me` = they owe me, `from_me` = I owe them. repay: `by_me` = I gave it back, `to_me` = they gave it back. */
+export type Direction = 'to_me' | 'from_me' | 'by_me';
+
+/** No field = rubles. Records in another currency are never added to a ruble sum. */
+export type Currency = 'USD' | 'EUR';
 
 export interface ParsedFields {
   /** Reminder: what to do; subscription: what the payment is; other kinds: a short label. */
@@ -26,6 +34,13 @@ export interface ParsedFields {
   term_months?: number;
   /** Day of month (subscriptions). */
   day?: number;
+  /** Debts and returns: who owes whom (see Direction). */
+  direction?: Direction;
+  currency?: Currency;
+  /** A past day for money («вчера потратил 500»): ISO UTC. NOT due_utc, so it never becomes a reminder. */
+  happened_utc?: string;
+  /** No hour was said: due_utc is 12:00 MSK of that day. */
+  no_time?: boolean;
 }
 
 export interface ParseResult {
@@ -36,6 +51,8 @@ export interface ParseResult {
   tags: string[];
   /** The input text exactly as received (never lost). */
   raw_text: string;
+  /** Parser hint, never stored: no money moved («Маша должна мне 1500»), so autosave gives no default wallet. */
+  walletless?: true;
 }
 
 /** Half-open character range [start, end) in the normalized text. */
@@ -59,6 +76,7 @@ export interface RuleMatch {
   kind: Kind;
   confidence: number;
   fields: ParsedFields;
+  walletless?: true;
 }
 
 export type Rule = (ctx: ParseContext) => RuleMatch | null;

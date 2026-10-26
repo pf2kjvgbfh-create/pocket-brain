@@ -78,10 +78,15 @@ export class PocketDb {
 
   /** Save a record and drop its draft in ONE transaction: either both happen or neither. */
   saveFromDraft(r: RecordRow, draftId: string): Promise<void> {
+    return this.saveManyFromDraft([r], draftId);
+  }
+
+  /** Several records from one phrase («кофе 300 и круассан 250») and the draft removal: ONE transaction. */
+  saveManyFromDraft(records: RecordRow[], draftId: string): Promise<void> {
     return this.run(['records', 'drafts'], 'readwrite', async (s) => {
-      const puts = req(s('records').put(r));
+      const puts = records.map((r) => req(s('records').put(r)));
       const del = req(s('drafts').delete(draftId));
-      await Promise.all([puts, del]);
+      await Promise.all([...puts, del]);
     }).then(() => this.changed());
   }
 
@@ -101,14 +106,19 @@ export class PocketDb {
 
   /** Soft delete: the row stays, marked deleted. Returns false if there is no such record. */
   softDelete(id: string, nowIso: string): Promise<boolean> {
+    return this.softDeleteMany([id], nowIso).then((n) => n > 0);
+  }
+
+  /** Soft delete several records in ONE transaction («Отменить» after a phrase with several amounts). Returns how many existed. */
+  softDeleteMany(ids: string[], nowIso: string): Promise<number> {
     return this.run(['records'], 'readwrite', async (s) => {
-      const row = await req<RecordRow | undefined>(s('records').get(id));
-      if (!row) return false;
-      await req(s('records').put({ ...row, deleted: true, updated_utc: nowIso }));
-      return true;
-    }).then((found) => {
-      if (found) this.changed();
-      return found;
+      const rows = await Promise.all(ids.map((id) => req<RecordRow | undefined>(s('records').get(id))));
+      const found = rows.filter((r): r is RecordRow => r !== undefined);
+      await Promise.all(found.map((row) => req(s('records').put({ ...row, deleted: true, updated_utc: nowIso }))));
+      return found.length;
+    }).then((n) => {
+      if (n > 0) this.changed();
+      return n;
     });
   }
 

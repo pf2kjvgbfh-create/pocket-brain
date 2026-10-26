@@ -1,6 +1,6 @@
 // Tiny IndexedDB helpers (no library): promisified requests and versioned migrations.
-import { DEFAULT_WALLETS } from '../config';
-import type { WalletRow } from './types';
+import { DEFAULT_WALLETS, LAST_WALLET_KEY, OLD_DEPOSIT_WALLET_ID } from '../config';
+import type { RecordRow, WalletRow } from './types';
 
 export type StoreName = 'records' | 'wallets' | 'settings' | 'drafts';
 
@@ -19,6 +19,26 @@ export const MIGRATIONS: Migration[] = [
       const row: WalletRow = { id: w.id, name: w.name, hidden: false, start_balance_minor: 0 };
       wallets.put(row);
     }
+  },
+  // v2 (stage 7): the «Вклад» wallet goes away — deleted when no record uses it and its start balance is 0, otherwise
+  // kept (it just no longer matches speech, see walletRefs). A «last wallet» pointing to it is reset either way.
+  (_db, tx) => {
+    const id = OLD_DEPOSIT_WALLET_ID;
+    const settings = tx.objectStore('settings');
+    const last = settings.get(LAST_WALLET_KEY);
+    last.onsuccess = () => {
+      if ((last.result as { value?: unknown } | undefined)?.value === id) settings.delete(LAST_WALLET_KEY);
+    };
+    const wallet = tx.objectStore('wallets').get(id);
+    wallet.onsuccess = () => {
+      const row = wallet.result as WalletRow | undefined;
+      if (!row || row.start_balance_minor !== 0) return;
+      const all = tx.objectStore('records').getAll();
+      all.onsuccess = () => {
+        const used = (all.result as RecordRow[]).some((r) => r.wallet_id === id || r.fields?.to_wallet_id === id);
+        if (!used) tx.objectStore('wallets').delete(id);
+      };
+    };
   },
 ];
 
