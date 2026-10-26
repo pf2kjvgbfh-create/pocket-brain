@@ -30,11 +30,22 @@ test('«Установка»: three big buttons, the files are signed Shortcuts'
   await page.screenshot({ path: `test-results/shots/install-${info.project.name}.png`, scale: 'css', fullPage: true });
 });
 
-test('Settings link to «Установка»', async ({ page }) => {
+test('Settings link to «Установка», also with the service worker in control', async ({ page }) => {
   await page.goto('./');
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload();
+  expect(await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
   await page.getByRole('tab', { name: 'Настройки' }).click();
   const link = page.getByTestId('install-link');
   await expect(link).toBeVisible();
   await link.click();
   await expect(page).toHaveURL(/\/install\/$/);
+  await expect(page.getByRole('heading', { name: 'Установка' })).toBeVisible();
+  // The file through the page (and so through the service worker), not around it.
+  const head = await page.evaluate(async () => {
+    const href = document.querySelector<HTMLAnchorElement>('[data-testid="install-remind"]')?.href ?? '';
+    const buf = await (await fetch(href)).arrayBuffer();
+    return String.fromCharCode(...new Uint8Array(buf.slice(0, 4)));
+  });
+  expect(head).toBe('AEA1');
 });
