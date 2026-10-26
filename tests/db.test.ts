@@ -139,6 +139,16 @@ describe('several records from one phrase', () => {
     expect(await db.listRecords()).toEqual([]);
     db.close();
   });
+
+  it('a wallet the phrase created is saved in the same call («перевёл 10к на сбер»)', async () => {
+    const db = await PocketDb.open(freshName());
+    await db.putDraft({ id: 'd1', text: 'перевёл 10к на сбер', created_utc: '2026-10-22T09:00:00.000Z' });
+    const sber = { id: 'w-d1', name: 'Сбер', hidden: false, start_balance_minor: 0 };
+    await db.saveManyFromDraft([record('d1', { kind: 'transfer' })], 'd1', [sber]);
+    expect((await db.listWallets()).find((w) => w.id === 'w-d1')).toEqual(sber);
+    expect(await db.listDrafts()).toEqual([]);
+    db.close();
+  });
 });
 
 describe('records', () => {

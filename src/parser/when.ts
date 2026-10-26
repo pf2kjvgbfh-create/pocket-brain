@@ -14,7 +14,7 @@ const HOURS = '(?:\\s+час(?:а|ов)?)';
 // Words after a bare «в N» that make it a count, not an hour («в 2 раза», «в 3 магазина» stays an hour: rare).
 const NOT_HOUR_AFTER = '(?!\\s*(?:руб|р\\.|₽|тыс|%|процент|раз|минут|секунд|дн|недел|месяц|год|лет|числ|-))';
 
-const HALF_RE = new RegExp(`${B}(?:в\\s+)?половин[уаы]\\s+(\\d{1,2})-го${PART}?${E}`, 'u');
+const HALF_RE = new RegExp(`${B}(?:в\\s+)?половин[уаые]\\s+(\\d{1,2})-го${PART}?${E}`, 'u');
 const CLOCK_RE = new RegExp(`${B}(?:в\\s+)?(\\d{1,2}):(\\d{2})${PART}?${E}`, 'u');
 const AT_HOUR_RE = new RegExp(`${B}в\\s+(\\d{1,2})${HOURS}?${PART}?${E}${NOT_HOUR_AFTER}`, 'u');
 const PART_HOUR_RE = new RegExp(`(?<!через\\s+)${B}(\\d{1,2})(?:${HOURS}?\\s+(утра|ночи|вечера)|${HOURS}\\s+(дня))${E}`, 'u');

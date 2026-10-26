@@ -81,12 +81,16 @@ export class PocketDb {
     return this.saveManyFromDraft([r], draftId);
   }
 
-  /** Several records from one phrase («кофе 300 и круассан 250») and the draft removal: ONE transaction. */
-  saveManyFromDraft(records: RecordRow[], draftId: string): Promise<void> {
-    return this.run(['records', 'drafts'], 'readwrite', async (s) => {
+  /**
+   * Several records from one phrase («кофе 300 и круассан 250») and the draft removal: ONE transaction. A wallet the
+   * phrase created («перевёл 10к на сбер») goes in the same transaction.
+   */
+  saveManyFromDraft(records: RecordRow[], draftId: string, wallets: WalletRow[] = []): Promise<void> {
+    return this.run(['records', 'drafts', 'wallets'], 'readwrite', async (s) => {
       const puts = records.map((r) => req(s('records').put(r)));
+      const walletPuts = wallets.map((w) => req(s('wallets').put(w)));
       const del = req(s('drafts').delete(draftId));
-      await Promise.all([...puts, del]);
+      await Promise.all([...walletPuts, ...puts, del]);
     }).then(() => this.changed());
   }
 

@@ -1,9 +1,12 @@
 // Subscriptions / monthly payments: «подписка», «каждый месяц», «ежемесячно», «каждое 5 число».
 // day = day of month; due_utc = next occurrence at the said time or 12:00 MSK.
+// «потратил / купил / заплатил / оплатил … подписку» is a payment that happened (an expense): it is a subscription
+// only with a repeat marker («каждый месяц», «в месяц», «ежемесячно», «каждое N число») or a day of month.
 import { findAmount } from '../money';
 import { cutTitle, word } from '../text';
 import { findClock, findDayOfMonth, nextDayOfMonth } from '../time';
 import { findWallets, firstWallet } from '../wallets';
+import { verbSpans } from './expense';
 import type { Rule, Span } from '../types';
 
 // «каждое 5 число» / «каждое 5-го число» (from «пятое») / «каждое 15-е число».
@@ -18,6 +21,8 @@ export const subscriptionRule: Rule = (ctx) => {
   if (markers.length === 0) return null;
   const amount = findAmount(ctx.lower);
   const day = findDayOfMonth(ctx.lower);
+  const repeats = day !== null || markers.some((m) => !/^подписк/u.test(ctx.lower.slice(m.start, m.end)));
+  if (!repeats && verbSpans(ctx.lower).length > 0) return null;
   const clock = findClock(ctx.lower);
   const wallets = findWallets(ctx.lower, ctx.wallets);
   const cut: Span[] = [...markers, ...wallets];

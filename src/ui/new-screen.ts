@@ -176,12 +176,12 @@ export function createNewScreen(app: App, root: HTMLElement): NewScreen {
   /** Draft -> record. Settings first (the record write triggers the backup), then ONE transaction: record + draft removal. */
   async function saveDraft(draft: DraftRow): Promise<{ records: RecordRow[]; walletBefore: WalletBefore }> {
     const [lastId, learned] = await Promise.all([app.db.getSetting<string>(LAST_WALLET_KEY), app.db.getSetting<unknown>(LEARNED_KEY)]);
-    const { records, namedWalletId } = buildAutoRecords({
+    const { records, namedWalletId, newWallets } = buildAutoRecords({
       draft, wallets: app.wallets, lastWalletId: lastId, learned: sanitizeLearned(learned), now: app.now(), records: app.records,
     });
     const walletBefore: WalletBefore = namedWalletId && namedWalletId !== lastId ? { changed: true, value: lastId } : UNCHANGED;
     if (walletBefore.changed) await app.db.setSetting(LAST_WALLET_KEY, namedWalletId);
-    await app.db.saveManyFromDraft(records, draft.id);
+    await app.db.saveManyFromDraft(records, draft.id, newWallets);
     return { records, walletBefore };
   }
 

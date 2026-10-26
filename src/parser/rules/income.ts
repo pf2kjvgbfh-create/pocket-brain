@@ -10,6 +10,15 @@ const MARKER_RE = word(
 );
 const ONTO_WALLET_RE = word('(?:за|с)?кинул\\p{L}*|перевели|положил\\p{L}*');
 const ONTO = new Set(['на', 'в', 'во']);
+// What the money was, in the dictionary form, for the toast and the list («Доход: зарплата — 120 000 ₽»).
+const TITLES: [RegExp, string][] = [
+  [word('зарплат\\p{L}*|зп'), 'зарплата'],
+  [word('аванс\\p{L}*'), 'аванс'],
+  [word('преми\\p{L}*'), 'премия'],
+  [word('кэшб[эе]к\\p{L}*|кешб[эе]к\\p{L}*'), 'кэшбэк'],
+  [word('подработк\\p{L}*'), 'подработка'],
+];
+const titleOf = (lower: string): string | undefined => TITLES.find(([re]) => findSpan(lower, re))?.[1];
 
 export const incomeRule: Rule = (ctx) => {
   const wallets = findWallets(ctx.lower, ctx.wallets);
@@ -20,6 +29,6 @@ export const incomeRule: Rule = (ctx) => {
   return {
     kind: 'income',
     confidence: 0.9,
-    fields: { amount_minor: amount.minor, wallet: (onto ? wallets.find((w) => ONTO.has(w.prep)) : firstWallet(wallets))?.name },
+    fields: { title: titleOf(ctx.lower), amount_minor: amount.minor, wallet: (onto ? wallets.find((w) => ONTO.has(w.prep)) : firstWallet(wallets))?.name },
   };
 };

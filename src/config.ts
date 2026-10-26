@@ -26,6 +26,21 @@ export const DEFAULT_WALLETS: DefaultWallet[] = [
   { id: 'tinkoff', name: 'Тинькофф', aliases: ['тиньк', 'тиньков', 'т-банк', 'тбанк'] },
 ];
 
+/**
+ * Banks that are not a wallet yet: «перевёл 10к на сбер» creates the wallet «Сбер» (owner, 2026-10-26). Only these
+ * words make a new wallet: «перевёл 500 на телефон» stays as it was.
+ */
+export const KNOWN_BANKS: WalletRef[] = [
+  { name: 'Сбер', aliases: ['сбер'] },
+  { name: 'Альфа', aliases: ['альфа', 'альфу', 'альфе', 'альфой'] },
+  { name: 'ВТБ', aliases: ['втб'] },
+  { name: 'Озон', aliases: ['озон'] },
+  { name: 'Яндекс', aliases: ['яндекс'] },
+  { name: 'Газпромбанк', aliases: ['газпромбанк'] },
+  { name: 'Райффайзен', aliases: ['райф'] },
+  { name: 'Совкомбанк', aliases: ['совком'] },
+];
+
 /** Moscow offset in minutes: every parsed time is interpreted in MSK regardless of the phone zone. */
 export const MSK_OFFSET_MIN = 180;
 

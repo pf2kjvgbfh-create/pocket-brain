@@ -41,3 +41,11 @@ export function cutTitle(norm: string, spans: Span[], extraStop: string[] = []):
   while (words.length > 0 && isStop(words[words.length - 1])) words.pop();
   return words.join(' ');
 }
+
+/**
+ * A one-word title said as an object («на подписку», «за квартиру», «на еду») back to its dictionary form: a final
+ * «у» after a consonant is the accusative of an «-а» noun. Longer titles are left as said.
+ */
+export function oneWordNominative(title: string): string {
+  return /^\p{L}*[бвгджзклмнпрстфхцчшщ]у$/iu.test(title) ? `${title.slice(0, -1)}а` : title;
+}

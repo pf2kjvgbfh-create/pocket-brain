@@ -253,6 +253,21 @@ test('«Деньги»: operations right after the wallets, «Показать �
   await page.locator('.sheet [data-action="cancel"]').click();
 });
 
+test('the Architect live phrases: a transfer to a new bank wallet, salary, a spent subscription, «в половине пятого»', async ({ page }) => {
+  await page.goto('./');
+  await addTyped(page, 'перевёл 10к на сбер');
+  await expect(toast(page)).toContainText(/Перевод: 10\s000\s₽, Наличные → Сбер/);
+  await addTyped(page, 'получил зарплату 120000');
+  await expect(toast(page)).toContainText(/Доход: зарплата — 120\s000\s₽/);
+  await addTyped(page, 'потратил 20 долларов на подписку');
+  await expect(toast(page)).toContainText('Записал: подписка — 20 $');
+  await expect(toast(page)).not.toContainText('в месяц');
+  await addTyped(page, 'напомни в половине пятого забрать посылку');
+  await expect(toast(page)).toContainText(/Напомню: забрать посылку — \d\d\.\d\d 16:30 МСК/);
+  await tab(page, 'Деньги');
+  await expect(page.locator('#screen-money [data-section="wallets"]')).toContainText('Сбер');
+});
+
 test('a subscription: the card with its hint and the toast leave «Записать» free', async ({ page }) => {
   await page.goto('./#t=подписка на облако 149 рублей 1-го числа');
   await expect(toast(page)).toContainText('Подписка: облако');

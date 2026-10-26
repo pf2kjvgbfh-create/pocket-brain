@@ -36,6 +36,8 @@ export interface AutoResults {
   /** One per amount («кофе 300 и круассан 250» → 2); ids `draft.id`, `draft.id-2`, … */
   records: RecordRow[];
   namedWalletId: string | null;
+  /** A bank named as a transfer target with no wallet yet («перевёл 10к на сбер» → «Сбер»): saved with the records. */
+  newWallets: WalletRow[];
 }
 
 /** Record id of part `i` of a phrase: the first keeps the draft id (so a retry is still an upsert). */
@@ -65,18 +67,32 @@ function buildOne(parsed: ParseResult, id: string, input: AutoInput, split: bool
   state.createdUtc = draft.created_utc;
   if (!walletless && KIND_FIELDS[result.kind].includes('wallet') && !state.walletId) {
     state.walletId = defaultWalletId(wallets, lastWalletId) ?? '';
+    // «перевёл на золотую» while the last wallet IS the golden one: the money comes from cash (or the next wallet).
+    if (state.walletId && state.walletId === state.toWalletId) {
+      state.walletId = defaultWalletId(wallets.filter((w) => w.id !== state.toWalletId), null) ?? '';
+    }
   }
   const record = recordFromState(state, now);
   // A part of a split phrase is never sent to the model: it would re-read the WHOLE phrase as one record.
   return needsModel(result) && !split ? { ...record, refine: 'pending' } : record;
 }
 
+/** Transfer targets the parser named that are no wallet yet (a known bank): new visible wallets, id from the draft. */
+function walletsToCreate(parts: ParseResult[], wallets: WalletRow[], draftId: string): WalletRow[] {
+  const names = [...new Set(parts.map((p) => (p.kind === 'transfer' ? p.fields.to_wallet : undefined)))];
+  return names
+    .filter((n): n is string => !!n && walletIdByName(wallets, n) === null)
+    .map((name, i) => ({ id: `w-${draftId}${i === 0 ? '' : `-${i + 1}`}`, name, hidden: false, start_balance_minor: 0 }));
+}
+
 export function buildAutoRecords(input: AutoInput): AutoResults {
   const { draft, wallets } = input;
   const parts = parseMany(draft.text, new Date(draft.created_utc), walletRefs(wallets));
-  const records = parts.map((p, i) => buildOne(p, partId(draft.id, i), input, parts.length > 1));
+  const newWallets = walletsToCreate(parts, wallets, draft.id);
+  const all = { ...input, wallets: [...wallets, ...newWallets] };
+  const records = parts.map((p, i) => buildOne(p, partId(draft.id, i), all, parts.length > 1));
   const named = parts.find((p) => KIND_FIELDS[p.kind].includes('wallet') && p.fields.wallet);
-  return { records, namedWalletId: named ? walletIdByName(wallets, named.fields.wallet) : null };
+  return { records, namedWalletId: named ? walletIdByName(wallets, named.fields.wallet) : null, newWallets };
 }
 
 /** One record (the first part): kept for callers and tests that think in single phrases. */

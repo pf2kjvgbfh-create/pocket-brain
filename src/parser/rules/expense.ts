@@ -2,7 +2,7 @@
 // a currency word or a wallet («кофе 180 рублей наличка»), a short «what + amount» note («такси 650»), or an
 // amount first and a few words («5000 бензин», «25000 за аренду»). The spending verb never ends up in the title.
 import { findAmount } from '../money';
-import { cutTitle, findSpan, word } from '../text';
+import { cutTitle, findSpan, oneWordNominative, word } from '../text';
 import { findTimes } from '../time';
 import { findWallets, firstWallet } from '../wallets';
 import { findHour } from '../when';
@@ -26,7 +26,7 @@ function expense(ctx: ParseContext, explicit: boolean): RuleMatch | null {
     kind: 'expense',
     confidence: explicit ? 0.9 : 0.6,
     fields: {
-      title: cutTitle(ctx.norm, cut),
+      title: oneWordNominative(cutTitle(ctx.norm, cut)),
       amount_minor: amount.minor,
       wallet: firstWallet(wallets)?.name,
     },
