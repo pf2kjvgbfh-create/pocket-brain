@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="apple-mobile-web-app-title" content="Мозг" />
+    <link rel="apple-touch-icon" href="/pocket-brain/apple-touch-icon.png" />
+    <title>Карманный мозг</title>
+    <script type="module" crossorigin src="/pocket-brain/assets/main-D0YKfl3c.js"></script>
+    <link rel="modulepreload" crossorigin href="/pocket-brain/assets/style-CKQYwOyU.js">
+    <link rel="modulepreload" crossorigin href="/pocket-brain/assets/config-CJhFOtB8.js">
+    <link rel="modulepreload" crossorigin href="/pocket-brain/assets/preload-helper-D2aIE16G.js">
+    <link rel="stylesheet" crossorigin href="/pocket-brain/assets/style-BN-rbZ3c.css">
+  </head>
+  <body>
+    <main id="screens">
+      <section class="screen" id="screen-new" data-tab="new" aria-labelledby="tab-new"></section>
+      <section class="screen" id="screen-todo" data-tab="todo" hidden></section>
+      <section class="screen" id="screen-money" data-tab="money" hidden></section>
+      <section class="screen" id="screen-ideas" data-tab="ideas" hidden></section>
+      <section class="screen" id="screen-settings" data-tab="settings" hidden></section>
+    </main>
+    <nav class="tabbar" role="tablist" aria-label="Разделы">
+      <button role="tab" id="tab-new" data-tab="new" aria-selected="true">Новое</button>
+      <button role="tab" id="tab-todo" data-tab="todo" aria-selected="false">Дела</button>
+      <button role="tab" id="tab-money" data-tab="money" aria-selected="false">Деньги</button>
+      <button role="tab" id="tab-ideas" data-tab="ideas" aria-selected="false">Мысли</button>
+      <button role="tab" id="tab-settings" data-tab="settings" aria-selected="false">Настройки</button>
+    </nav>
+  </body>
+</html>

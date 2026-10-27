@@ -1,0 +1,1 @@
+import{t as e}from"./rolldown-runtime-DK3Fl9T5.js";var t=e({default:()=>n}),n=`/pocket-brain/assets/wllama-DrYkKwf9.wasm`;export{t as n,n as t};

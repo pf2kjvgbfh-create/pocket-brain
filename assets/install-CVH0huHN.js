@@ -1,0 +1,1 @@
+import"./style-CKQYwOyU.js";import{t as e,v as t,y as n}from"./config-CJhFOtB8.js";var r=(e,t)=>{document.querySelector(`[data-testid="${e}"]`)?.addEventListener(`click`,()=>{try{localStorage.setItem(t,`1`)}catch{}})};r(`install-remind`,t),r(`install-say`,n),r(`install-ai`,e);

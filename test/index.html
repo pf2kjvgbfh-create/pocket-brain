@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Тест телефона" />
+    <title>Тест телефона</title>
+    <script type="module" crossorigin src="/pocket-brain/assets/test-CddMwpaH.js"></script>
+    <link rel="modulepreload" crossorigin href="/pocket-brain/assets/style-CKQYwOyU.js">
+    <link rel="modulepreload" crossorigin href="/pocket-brain/assets/preload-helper-D2aIE16G.js">
+    <link rel="modulepreload" crossorigin href="/pocket-brain/assets/rolldown-runtime-DK3Fl9T5.js">
+    <link rel="modulepreload" crossorigin href="/pocket-brain/assets/wllama-BtPozGD4.js">
+    <link rel="modulepreload" crossorigin href="/pocket-brain/assets/wllama-Ckl67KBL.js">
+    <link rel="modulepreload" crossorigin href="/pocket-brain/assets/wllama-DgwKb-Fu.js">
+    <link rel="stylesheet" crossorigin href="/pocket-brain/assets/style-BN-rbZ3c.css">
+    <link rel="stylesheet" crossorigin href="/pocket-brain/assets/test-Dj5-D0Ve.css">
+  </head>
+  <body>
+    <main>
+      <h1>Тест телефона</h1>
+      <p class="hint" id="mode"></p>
+      <p class="hint">
+        Нажимай кнопки по порядку и жди ответа. Если вкладка закрылась сама или страница перезагрузилась, это тоже
+        результат: открой страницу снова, таблица покажет, до какого шага дошли.
+      </p>
+      <div class="buttons" id="buttons">
+        <button data-step="1">Шаг 1</button>
+        <button data-step="2">Шаг 2</button>
+        <button data-step="3">Шаг 3</button>
+        <button data-step="4">Шаг 4</button>
+        <button data-step="5a">Шаг 5а (Qwen2.5)</button>
+        <button data-step="5b">Шаг 5б (Qwen3)</button>
+      </div>
+      <p class="hint">
+        Шаг 4 занимает память по кусочку, пока телефон не скажет «хватит». Шаг 5 скачивает модель (около 400-500 МБ):
+        включи Wi-Fi.
+      </p>
+      <table id="results" aria-label="Результаты">
+        <thead>
+          <tr><th>шаг</th><th>число</th><th>итог</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="buttons">
+        <button id="reset" class="secondary">Сбросить</button>
+        <button id="clear-models" class="secondary">Удалить скачанные модели</button>
+      </div>
+      <p class="send">
+        Что прислать в чат: скриншот всей таблицы (прокрути так, чтобы все строки были видны). Если строк не
+        помещается на экран, сделай два скриншота. В таблице нет ничего секретного.
+      </p>
+    </main>
+  </body>
+</html>
